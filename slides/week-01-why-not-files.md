@@ -25,6 +25,50 @@ footer: DBMS & Data Platforms
 
 ---
 
+## First, the words — what is *data*?
+
+**Data** = facts about the business, recorded so they can be used later.
+
+- *"Customer #4589 ordered 2 kg of beans on June 12 for €49.90"*
+- A price, a date, a stock count, an email address
+
+Data becomes **information** when it answers a question:
+*"Which customers spent the most last month?"*
+
+<!-- Speaker notes: no CS background assumed — spend the two minutes here. Every example this semester is a recorded business fact; analytics is just turning those facts back into answers. -->
+
+---
+
+## What is a *database*?
+
+A **database** = an organized, shared collection of data that outlives any
+single program or person.
+
+By that definition, Rivertown's Excel workbook *is* a database — just a
+fragile one.
+
+**The question this week is not "do you have a database?"
+It's "what is managing it?"**
+
+<!-- Speaker notes: deliberately generous definition — a filing cabinet and a spreadsheet both qualify. This sets up the demo: the problem isn't that they store data, it's everything around the storing. -->
+
+---
+
+## Database vs. DBMS
+
+| Term | What it is | Example |
+|---|---|---|
+| Database | The data itself, organized | Rivertown's orders & inventory |
+| **DBMS** | The *software* that manages it | **PostgreSQL**, MySQL, SQLite |
+| SQL | The language you ask it in | `SELECT …` |
+
+People say "database" for both. This course is about the **management
+system** — the guarantees the software gives you.
+
+<!-- Speaker notes: nail this distinction once, reuse it all semester. PostgreSQL is our DBMS throughout; SQL is how we talk to it starting today in lab. Now: what does managing data WELL actually require? Watch what happens without it. -->
+
+---
+
 ## The business decision
 
 **Rivertown Coffee Roasters** — 3 shops, 40 employees, growing fast.
