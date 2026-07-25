@@ -1,0 +1,119 @@
+/* @theme course */
+/*
+ * Course theme for "Database Systems & Data Platforms".
+ * All deck styling lives here — decks must contain no inline styles.
+ * Rebrand in one line: change --accent below.
+ */
+
+@import 'default';
+
+:root {
+  --accent: #0b6e99;          /* change this one line to rebrand */
+  --ink: #1a1a1a;
+  --paper: #fdfdfc;
+  --muted: #5a5a5a;
+  --code-bg: #f4f4f2;
+  --code-ink: #232323;
+}
+
+section {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
+  font-size: 30px;
+  line-height: 1.45;
+  padding: 60px 70px 70px;
+}
+
+h1 {
+  color: var(--accent);
+  font-size: 1.6em;
+  line-height: 1.15;
+  margin-bottom: 0.5em;
+}
+
+h2 {
+  color: var(--ink);
+  font-size: 1.2em;
+  border-bottom: 3px solid var(--accent);
+  padding-bottom: 0.15em;
+}
+
+h3 {
+  color: var(--muted);
+  font-size: 1.0em;
+}
+
+strong { color: var(--accent); }
+
+a { color: var(--accent); }
+
+blockquote {
+  border-left: 6px solid var(--accent);
+  padding-left: 0.8em;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Large, readable code at projector distance */
+code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Menlo', monospace;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-radius: 4px;
+  padding: 0.08em 0.3em;
+  font-size: 0.9em;
+}
+
+pre {
+  background: var(--code-bg);
+  border: 1px solid #ddd;
+  border-left: 6px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.7em 0.9em;
+  font-size: 0.78em;
+  line-height: 1.4;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 1em;
+}
+
+table {
+  font-size: 0.85em;
+  margin: 0.5em auto;
+}
+
+th {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+td, th { padding: 0.3em 0.7em; }
+
+/* Visible slide numbers */
+section::after {
+  content: attr(data-marpit-pagination) ' / ' attr(data-marpit-pagination-total);
+  color: var(--muted);
+  font-size: 0.55em;
+}
+
+/* Footer: course short-name */
+footer {
+  color: var(--muted);
+  font-size: 0.55em;
+  left: 70px;
+}
+
+/* Lead / title slides: add `<!-- _class: lead -->` */
+section.lead {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+section.lead h1 { font-size: 2.0em; }
+section.lead h3 { color: var(--muted); }
