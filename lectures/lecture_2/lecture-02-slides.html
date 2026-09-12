@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>From One File to Four Tables — Lecture 2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{
+  --bg:#ffffff; --bg-subtle:#F3F6F9; --bg-grid:#EEF3F8;
+  --ink:#141517; --ink-soft:#4B5563; --ink-faint:#8A94A3; --rule:#DCE3EA;
+  --blue:#3D6D9E; --blue-mid:#5B8FC4; --blue-light:#BCD7E9; --blue-dark:#1F3864;
+  --slate:#687F91; --slate-dark:#4F626F; --slate-light:#DCE4EA;
+  --green:#2E7D4F; --green-dark:#1F5E3B; --green-tint:#E7F4EC;
+  --red:#D93025; --red-tint:#FCEAE8;
+  --code-bg:#202124; --code-fg:#D9D9D9; --code-comment:#5FAE7E; --code-keyword:#6FA8DC;
+  --code-type:#7FB9E8; --code-string:#E8A87C; --code-number:#9CCC65; --code-fn:#DCC98A;
+  --font-sans: Arial, Helvetica, "Helvetica Neue", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Roboto Mono", "Courier New", monospace;
+  --slide-w: 1280px; --slide-h: 720px;
+}
+*{box-sizing:border-box;}
+html,body{ margin:0; padding:0; height:100%; background:#20242b; font-family:var(--font-sans); color:var(--ink); overflow:hidden; }
+.deck{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+.slide{ position:absolute; width:var(--slide-w); height:var(--slide-h); background:var(--bg); display:none; flex-direction:column; padding:56px 72px 48px; box-shadow:0 30px 80px rgba(0,0,0,.35); transform:scale(var(--s,1)); transform-origin:center center; }
+.slide.active{ display:flex; }
+.slide .notes{ display:none; }
+.viewport-fit{ position:relative; width:var(--slide-w); height:var(--slide-h); }
+.chrome{ position:fixed; left:0; right:0; bottom:0; height:5px; background:rgba(255,255,255,.08); z-index:50;}
+.chrome__bar{ height:100%; background:linear-gradient(90deg,var(--blue),var(--green)); width:0%; transition:width .25s ease;}
+.counter{ position:fixed; right:18px; bottom:14px; z-index:50; font:600 13px/1 var(--font-sans); color:rgba(255,255,255,.55); letter-spacing:.02em; }
+.deckname{ position:fixed; left:18px; bottom:14px; z-index:50; font:600 12px/1 var(--font-sans); color:rgba(255,255,255,.35); letter-spacing:.04em; text-transform:uppercase; }
+.notes-bar{ position:fixed; left:0; right:0; bottom:0; z-index:60; background:#12151a; color:#E7ECF2; border-top:3px solid var(--green); padding:22px 48px; font:16px/1.5 var(--font-sans); max-height:32vh; overflow:auto; transform:translateY(100%); transition:transform .2s ease; }
+.notes-bar.show{ transform:translateY(0); }
+.notes-bar b{ color:var(--green); text-transform:uppercase; font-size:12px; letter-spacing:.08em; display:block; margin-bottom:8px;}
+.overview{ position:fixed; inset:0; background:#181b20; z-index:100; display:none; padding:40px; overflow:auto; }
+.overview.show{ display:block; }
+.overview__grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:14px; max-width:1500px; margin:0 auto; }
+.overview__item{ background:#fff; border-radius:6px; aspect-ratio:16/9; position:relative; cursor:pointer; overflow:hidden; border:2px solid transparent; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; font-size:10px; color:var(--ink-soft); font-weight:600; }
+.overview__item:hover{ border-color:var(--green); }
+.overview__item span{ position:absolute; top:4px; left:6px; font-size:9px; color:var(--ink-faint); font-weight:700;}
+.kicker{ font:700 13px/1 var(--font-sans); letter-spacing:.12em; text-transform:uppercase; color:var(--blue); margin:0 0 14px; }
+h1.title{ font:700 40px/1.15 var(--font-sans); color:var(--ink); margin:0 0 14px; letter-spacing:-.01em; }
+p.lede{ font:400 20px/1.45 var(--font-sans); color:var(--ink-soft); margin:0 0 28px; max-width:980px; }
+.body-area{ flex:1; min-height:0; display:flex; flex-direction:column; }
+.slide--title{ align-items:center; justify-content:center; text-align:center; }
+.slide--title .eyebrow{ font:600 16px var(--font-sans); color:var(--blue); letter-spacing:.04em; margin-bottom:26px;}
+.slide--title h1{ font:700 52px/1.2 var(--font-sans); margin:0 0 26px; max-width:920px; }
+.slide--title .sub{ font:italic 24px var(--font-sans); color:var(--ink-soft); margin:0 0 34px;}
+.slide--title .meta{ font:19px var(--font-sans); color:var(--ink-faint); }
+.slide--section{ justify-content:center; position:relative; overflow:hidden; background:linear-gradient(135deg,#1F3864 0%, #2c5183 55%, var(--blue) 100%); color:#fff; }
+.slide--section .num{ font:800 220px/1 var(--font-mono); position:absolute; right:20px; top:-40px; color:rgba(255,255,255,.10); letter-spacing:-.05em; }
+.slide--section .kicker{ color:#BFD6EC; }
+.slide--section h1{ color:#fff; font-size:52px; max-width:900px; }
+.slide--section p.lede{ color:#D9E6F2; font-size:22px; max-width:820px; }
+.slide--content h1.title{ font-size:36px; }
+.cols{ display:flex; gap:40px; flex:1; min-height:0; }
+.col{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.col--narrow{ flex:0 0 340px; }
+.col--wide{ flex:1.4; }
+ul.points{ margin:0; padding:0; list-style:none; }
+ul.points li{ position:relative; padding-left:26px; margin-bottom:14px; font:19px/1.5 var(--font-sans); color:var(--ink); }
+ul.points li::before{ content:""; position:absolute; left:0; top:9px; width:9px; height:9px; border-radius:50%; background:var(--blue); }
+ul.points.tight li{ margin-bottom:8px; font-size:17px; }
+ul.points li b{ color:var(--blue-dark); }
+ul.points li .neg{ color:var(--red); font-weight:700; }
+.defs{ display:flex; flex-direction:column; gap:18px; }
+.def{ display:flex; gap:18px; align-items:baseline; }
+.def__term{ flex:0 0 190px; font:700 20px var(--font-sans); color:var(--blue-dark); }
+.def__body{ font:19px/1.5 var(--font-sans); color:var(--ink); }
+.panel{ border:1px solid var(--rule); border-radius:8px; overflow:hidden; display:flex; flex-direction:column; background:#fff;}
+.panel__head{ background:var(--slate); color:#fff; font:700 17px var(--font-sans); padding:12px 18px; }
+.panel__head.blue{ background:var(--blue-dark); }
+.panel__body{ padding:16px 18px; background:var(--bg-subtle); flex:1; }
+.panel__body ul.points li::before{ background:var(--slate); }
+.callout{ border-radius:8px; padding:14px 18px; font:16px/1.45 var(--font-sans); margin-top:auto; }
+.callout--green{ background:var(--green); color:#fff; }
+.callout--green b{ text-transform:uppercase; font-size:12px; letter-spacing:.06em; display:block; margin-bottom:3px; opacity:.9;}
+.callout--red{ background:var(--red); color:#fff; }
+.callout--red b{ text-transform:uppercase; font-size:12px; letter-spacing:.06em; display:block; margin-bottom:3px; opacity:.9;}
+.boxrow{ display:flex; gap:28px; flex:1; align-items:stretch; }
+.box{ flex:1; border:2px solid var(--slate); border-radius:8px; overflow:hidden; display:flex; flex-direction:column;}
+.box__head{ background:var(--slate); color:#fff; font:700 18px var(--font-sans); padding:10px 16px;}
+.box__body{ padding:14px 16px; font:16px/1.6 var(--font-mono); color:var(--ink); background:#fff; flex:1;}
+.box--accent .box__head{ background:var(--blue-dark); }
+.slide--statement{ align-items:center; justify-content:center; text-align:center; }
+.slide--statement .stat{ font:800 108px/1 var(--font-sans); color:var(--blue-dark); margin-bottom:8px; }
+.slide--statement .stat-label{ font:22px var(--font-sans); color:var(--ink-soft); }
+.slide--statement .big-line{ font:700 42px/1.35 var(--font-sans); color:var(--blue-dark); max-width:980px; }
+.slide--statement .big-line em{ color:var(--red); font-style:normal; }
+.slide--question{ justify-content:center; background:var(--bg-subtle); }
+.slide--question .qmark{ font:800 90px var(--font-sans); color:var(--blue-light); line-height:1; margin-bottom:10px;}
+.slide--question h1{ font:700 38px/1.35 var(--font-sans); color:var(--blue-dark); max-width:1000px; }
+.slide--question .hint{ font:italic 19px var(--font-sans); color:var(--ink-faint); margin-top:22px; }
+table.cmp{ border-collapse:collapse; width:100%; }
+table.cmp th, table.cmp td{ border:1px solid var(--rule); padding:14px 18px; text-align:left; font:18px/1.4 var(--font-sans); }
+table.cmp thead th{ background:var(--slate); color:#fff; font-weight:700; }
+table.cmp tbody th{ background:var(--slate-light); font-weight:700; color:var(--ink); width:230px;}
+table.cmp tbody tr:nth-child(even) td{ background:var(--bg-subtle); }
+table.cmp td.yes{ color:var(--green-dark); font-weight:700; }
+table.cmp td.no{ color:var(--red); font-weight:700; }
+table.cmp .highlight-col{ background:var(--green-tint) !important; color:var(--green-dark); font-weight:600;}
+table.cmp td.bad{ background:var(--red-tint) !important; color:var(--red); font-weight:700; }
+table.cmp td.key{ font-weight:700; color:var(--blue-dark); }
+table.cmp.compact th, table.cmp.compact td{ padding:7px 12px; font-size:15px; line-height:1.3; }
+table.cmp.compact thead th{ font-size:14px; }
+.panel .tblcap{ font:700 13px var(--font-sans); color:var(--ink-soft); letter-spacing:.02em; margin:8px 0 5px; }
+table.cmp.tight th, table.cmp.tight td{ padding:4px 12px; }
+.panel .tblcap:first-child{ margin-top:0; }
+table.vocab{ border-collapse:collapse; width:100%; }
+table.vocab th, table.vocab td{ border-bottom:1px solid var(--rule); padding:13px 16px; text-align:left; font:18px/1.4 var(--font-sans); vertical-align:top;}
+table.vocab thead th{ background:var(--blue-dark); color:#fff; font-weight:700; border-bottom:none;}
+table.vocab td.term{ font:700 17px var(--font-mono); color:var(--blue-dark); white-space:nowrap; }
+.code{ background:var(--code-bg); border-radius:14px; padding:24px 28px; font:19px/1.65 var(--font-mono); color:var(--code-fg); overflow:auto; white-space:pre; }
+.code .com{ color:var(--code-comment); }
+.code .kw{ color:var(--code-keyword); font-weight:700;}
+.code .ty{ color:var(--code-type); }
+.code .str{ color:var(--code-string); }
+.code .num{ color:var(--code-number); }
+.code .fn{ color:var(--code-fn); }
+.code .er{ color:#F28B82; }
+.legend{ display:flex; gap:36px; flex-wrap:wrap; }
+.legend__item{ display:flex; align-items:center; gap:14px; }
+.legend__sym{ font:800 26px var(--font-mono); color:var(--blue-dark); min-width:70px; }
+.legend__label{ font:18px var(--font-sans); color:var(--ink); }
+.erwrap{ flex:1; display:flex; align-items:center; justify-content:center; }
+footer.tag{ margin-top:auto; padding-top:14px; font:13px var(--font-sans); color:var(--ink-faint); border-top:1px solid var(--rule); }
+.chiprow{ display:flex; gap:14px; flex-wrap:wrap; margin-top:18px; }
+.chip{ background:var(--slate); color:#fff; font:700 16px var(--font-mono); padding:10px 20px; border-radius:6px; }
+.cardviz{ display:flex; flex-direction:column; gap:20px; flex:1; justify-content:center; }
+.cardviz__row{ display:flex; align-items:center; gap:0; }
+.cv-box{ background:#fff; border:2px solid var(--slate); border-radius:6px; padding:12px 22px; font:700 19px var(--font-sans); color:var(--ink); min-width:170px; text-align:center; }
+.cv-box.accent{ border-color:var(--blue-dark); background:var(--blue-dark); color:#fff; }
+.cv-conn{ flex:1; text-align:center; font:700 21px var(--font-mono); color:var(--blue); letter-spacing:.03em; }
+.cv-label{ flex:0 0 220px; font:16px var(--font-sans); color:var(--ink-soft); padding-left:24px; }
+.headstat{ font:800 64px/1 var(--font-sans); color:var(--blue-dark); margin-bottom:6px; }
+.headstat-label{ font:18px var(--font-sans); color:var(--ink-soft); margin-bottom:22px; }
+@media print{
+  html,body{ overflow:visible; background:#fff; }
+  .chrome,.counter,.deckname,.notes-bar,.overview{ display:none !important; }
+  .deck{ position:static; display:block; }
+  .slide{ display:flex !important; position:static; box-shadow:none; width:100%; height:100vh; page-break-after:always; transform:none !important; }
+  .slide .notes{ display:block !important; margin-top:14px; padding-top:10px; border-top:1px dashed #999; font:12px var(--font-sans); color:#555; }
+}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+  <div class="viewport-fit" id="viewportFit">
+
+    <section class="slide slide--title active" data-title="Title">
+      <div class="eyebrow">Introduction to Databases &amp; SQL · Lecture 2</div>
+      <h1>From One File to Four Tables</h1>
+      <div class="sub">YSU, Data Science for Business</div>
+      <div class="meta">Live build in SQL — follow along in the terminal</div>
+      <div class="notes"><b>Say</b> Today is hands-on: we take one messy spreadsheet export and turn it into the four-table schema from last time — and we do the SQL live, right here in the terminal, alongside these slides.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Agenda">
+      <div class="kicker">Today's Arc</div>
+      <h1 class="title">Nine parts, one running example</h1>
+      <p class="lede">Same store, same 42 orders, start to finish — a flat file becomes a real schema, gets queried, gets defended, and gets changed.</p>
+      <div class="body-area">
+        <ul class="points tight" style="columns:2; column-gap:48px;">
+          <li><b>1</b> — The problem in the file</li>
+          <li><b>2</b> — Data modeling &amp; normal forms</li>
+          <li><b>3</b> — Why SQL</li>
+          <li><b>4</b> — DDL: creating tables</li>
+          <li><b>5</b> — DML: filling tables</li>
+          <li><b>6</b> — DQL: first queries</li>
+          <li><b>7</b> — The payoff: rejoining</li>
+          <li><b>8</b> — Constraints refusing bad data</li>
+          <li><b>9</b> — ALTER &amp; DROP: evolving a schema</li>
+        </ul>
+      </div>
+      <div class="notes"><b>Say</b> Part 2 is the long one — modeling is the actual skill; everything after is typing what you already decided on paper.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Recap: where we left off">
+      <div class="kicker">Where We Left Off</div>
+      <h1 class="title">Two claims from Lecture 1, still unproven</h1>
+      <div class="body-area">
+        <div class="defs">
+          <div class="def"><div class="def__term">Claim 1</div><div class="def__body">Flat files cause redundancy and inconsistency.</div></div>
+          <div class="def"><div class="def__term">Claim 2</div><div class="def__body">The database approach fixes it.</div></div>
+        </div>
+        <div class="chiprow">
+          <div class="chip">Customers</div><div class="chip">Employees</div><div class="chip">Products</div><div class="chip">Orders</div>
+        </div>
+        <div class="callout callout--green" style="margin-top:26px; max-width:900px;"><b>Today</b>Both claims become something you do with your own hands — first by finding the redundancy yourself, then by modeling your way out of it, then by building exactly these four tables.</div>
+      </div>
+      <div class="notes"><b>Say</b> We ended last time by defining SQL — but nobody's written a line of it yet. That changes today.</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 1 — The problem in the file">
+      <div class="num">01</div>
+      <div class="kicker">Part 1</div>
+      <h1 class="title">The problem in the file</h1>
+      <p class="lede">42 rows. One spreadsheet export. How much of it is actually new information?</p>
+      <div class="notes"><b>Say</b> This is what a real export looks like — everyone here has opened a file exactly like this.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="One wide file, 13 columns">
+      <div class="kicker">Part 1</div>
+      <h1 class="title">One row per sale — everything on it</h1>
+      <p class="lede"><code style="font-family:var(--font-mono);">sales_raw</code>: 42 rows, 13 columns. Customer, employee and product details, all flattened onto every order.</p>
+      <div class="body-area">
+        <table class="cmp">
+          <thead><tr><th>orderID</th><th>customerFirstName</th><th>customerLastName</th><th>customerBirthDate</th><th>productCategory</th><th>orderTotal</th></tr></thead>
+          <tbody>
+            <tr><td>1005</td><td>Aram</td><td>Vardanyan</td><td>1997-12-09</td><td>Audio</td><td>299.80</td></tr>
+            <tr><td>1016</td><td>Narek</td><td>Manukyan</td><td>1992-09-03</td><td>Laptops</td><td>1250.00</td></tr>
+            <tr><td>1042</td><td>Narek</td><td>Manukyan</td><td>1992-09-03</td><td>Audio</td><td>149.90</td></tr>
+            <tr><td>1031</td><td>Aram</td><td>Vardanyan</td><td>1997-12-09</td><td>Storage</td><td>148.00</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:16px; font:16px var(--font-sans); color:var(--ink-faint);">…38 more rows, plus 7 more columns (dates, employee, price) not shown here, in <code style="font-family:var(--font-mono);">data/sales_flat.csv</code>. Narek's whole customer record repeats on every one of his orders.</p>
+      </div>
+      <div class="notes"><b>Say</b> Load it live: \copy sales_raw FROM 'data/sales_flat.csv'. Then scroll — Narek and Aram already repeat in the first four rows.</div>
+    </section>
+
+    <section class="slide slide--question" data-title="Q: how many customers does this shop have?">
+      <div class="qmark">?</div>
+      <h1>Looking at this file — how many customers does this shop actually have?</h1>
+      <div class="hint">Pause here. Take guesses before running the count.</div>
+      <div class="notes"><b>Ask the room</b> before you run count(distinct customerLastName). Let the guesses land, then run it live.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="42 rows, 8 customers, 6 products">
+      <div class="kicker">Part 1</div>
+      <h1 class="title">42 rows. 8 customers. 6 product categories.</h1>
+      <div class="body-area">
+        <table class="cmp">
+          <thead><tr><th>Customer</th><th>Rows in sales_raw</th></tr></thead>
+          <tbody>
+            <tr><td>Davit Petrosyan</td><td class="highlight-col">8</td></tr>
+            <tr><td>Aram Vardanyan</td><td>7</td></tr>
+            <tr><td>Tigran Grigoryan</td><td>7</td></tr>
+            <tr><td>Narek Manukyan</td><td>6</td></tr>
+            <tr><td>Mariam Hakobyan</td><td>6</td></tr>
+            <tr><td>Anna Sargsyan / Sona Karapetyan / Lusine Avetisyan</td><td>4 / 3 / 1</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:14px; font:17px var(--font-sans); color:var(--ink-soft);">Davit's birth date is stored 8 times. The Laptops price is stored 12 times.</p>
+      </div>
+      <div class="notes"><b>Say</b> count(*), count(distinct customerLastName), then GROUP BY customer name, count(*) — run all three live, in that order.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Four ways redundancy bites back">
+      <div class="kicker">Part 1</div>
+      <h1 class="title">Four ways redundancy bites back</h1>
+      <div class="body-area">
+        <table class="cmp">
+          <thead><tr><th>Scenario</th><th>What happens</th><th>Name</th></tr></thead>
+          <tbody>
+            <tr><td>A birth date was entered wrong</td><td>You must fix every copy</td><td class="highlight-col">update anomaly</td></tr>
+            <tr><td>You miss one copy</td><td>Two different "truths" now exist</td><td class="highlight-col">inconsistency</td></tr>
+            <tr><td>A new category hasn't sold yet</td><td>Nowhere to put it — no row</td><td class="highlight-col">insertion anomaly</td></tr>
+            <tr><td>You delete the last order in a category</td><td>The category vanishes entirely</td><td class="highlight-col">deletion anomaly</td></tr>
+          </tbody>
+        </table>
+        <div class="callout callout--green" style="margin-top:18px; max-width:900px;"><b>Fixing this needs a method, not a guess</b>That method is data modeling — next.</div>
+      </div>
+      <div class="notes"><b>Ask the room</b> before revealing each name — for each scenario, what actually breaks, and what would you call it?</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 2 — Data modeling">
+      <div class="num">02</div>
+      <div class="kicker">Part 2</div>
+      <h1 class="title">Data modeling</h1>
+      <p class="lede">Entities, relationships, cardinality, keys, functional dependencies, normal forms — the actual design work, done before any SQL.</p>
+      <div class="notes"><b>Say</b> This is the longest part today, and the most important skill — everything after this is typing what we decide here.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Entities, attributes, relationships">
+      <div class="kicker">Part 2 &middot; Data Modeling</div>
+      <h1 class="title">Three words carry the whole idea</h1>
+      <div class="cols">
+        <div class="col">
+          <div class="defs">
+            <div class="def"><div class="def__term">Entity</div><div class="def__body">A real-world <i>thing</i> the business tracks, with its own existence. Customer, Employee, Product.</div></div>
+            <div class="def"><div class="def__term">Attribute</div><div class="def__body">A fact <i>about</i> an entity — firstName, birthDate, moneySpent.</div></div>
+            <div class="def"><div class="def__term">Relationship</div><div class="def__body">How two entities interact — a customer <i>places</i> an order.</div></div>
+          </div>
+        </div>
+        <div class="col col--narrow">
+          <div class="panel" style="height:100%;">
+            <div class="panel__head blue">In our store</div>
+            <div class="panel__body"><ul class="points tight">
+              <li><b>Entities:</b> Customer, Employee, Product</li>
+              <li><b>Attributes:</b> firstName, price, birthDate…</li>
+              <li><b>Relationships:</b> places, handles, is for</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes"><b>Say</b> Every schema you'll ever design starts from naming these three things correctly.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="An order is not a thing — it's an event">
+      <div class="kicker">Part 2 &middot; Data Modeling</div>
+      <h1 class="title">An order doesn't exist on its own</h1>
+      <p class="lede">It exists because a customer, an employee and a product came together at a moment in time. That makes it an <b>event</b> — the same distinction sales_raw collapsed.</p>
+      <div class="body-area" style="justify-content:center;">
+        <div class="boxrow">
+          <div class="box"><div class="box__head">Customer</div><div class="box__body" style="font-family:var(--font-sans); color:var(--ink-soft);">entity</div></div>
+          <div class="box"><div class="box__head">Employee</div><div class="box__body" style="font-family:var(--font-sans); color:var(--ink-soft);">entity</div></div>
+          <div class="box"><div class="box__head">Product</div><div class="box__body" style="font-family:var(--font-sans); color:var(--ink-soft);">entity</div></div>
+        </div>
+        <div style="text-align:center; font:26px var(--font-sans); color:var(--blue); margin:16px 0;">&#8595;&nbsp; combine at a moment in time &nbsp;&#8595;</div>
+        <div style="display:flex; justify-content:center;">
+          <div class="box box--accent" style="max-width:320px;"><div class="box__head">Order</div><div class="box__body" style="font-family:var(--font-sans); color:#fff; background:var(--blue-dark);">event</div></div>
+        </div>
+        <p style="text-align:center; margin-top:18px; font:17px var(--font-sans); color:var(--ink-soft);">Entities get their own table because they exist independently. Events get their own table because they capture <i>who, what, when</i> together.</p>
+      </div>
+      <div class="notes"><b>Say</b> This is the same distinction sales_raw collapsed — we're restoring it.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Cardinality: how many relate to how many">
+      <div class="kicker">Part 2 &middot; Data Modeling</div>
+      <h1 class="title">How many relate to how many</h1>
+      <p class="lede">For every relationship, ask: how many of one side can pair with how many of the other?</p>
+      <div class="body-area">
+        <table class="cmp">
+          <thead><tr><th>Relationship</th><th>One side</th><th>Many side</th><th>Reads as</th></tr></thead>
+          <tbody>
+            <tr><td>Customer &amp; Orders</td><td class="highlight-col">1 customer</td><td>many orders</td><td>one customer places many orders</td></tr>
+            <tr><td>Employee &amp; Orders</td><td class="highlight-col">1 employee</td><td>many orders</td><td>one employee handles many orders</td></tr>
+            <tr><td>Product &amp; Orders</td><td class="highlight-col">1 product</td><td>many orders</td><td>one product appears in many orders</td></tr>
+            <tr style="background:var(--green-tint);"><td><b>Customer &amp; Product</b></td><td class="no" style="color:var(--green-dark);">many customers</td><td class="no" style="color:var(--green-dark);">many products</td><td><b>many-to-many</b> — Davit bought 5 different products; Laptops was bought by 7 different customers</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:16px; font:17px var(--font-sans); color:var(--ink-soft);">A many-to-many relationship can't be a single line between two tables — it needs a table in the middle. Here that table is <b>orders</b>: each order pairs one customer with one product, which turns the one M:N into the two 1:N links above.</p>
+      </div>
+      <div class="notes"><b>Say</b> Customers-to-products is the real M:N. Orders is the junction that resolves it — that's why the ER diagram shows two 1:N lines, not one M:N line. Same trick again in the ORDER_ITEMS aside if one order could hold many products.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Required or optional, one or many">
+      <div class="kicker">Part 2 &middot; Data Modeling</div>
+      <h1 class="title">Required or optional, one or many</h1>
+      <p class="lede">Every relationship end is one of four combinations. ER diagrams draw them as small line-end symbols — <b>crow's foot notation</b>.</p>
+      <div class="body-area">
+        <table class="cmp compact">
+          <thead><tr><th style="width:110px;">Symbol</th><th style="width:150px;">Type</th><th>Meaning</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td style="font:800 22px var(--font-mono); color:var(--blue-dark);">──||</td><td class="highlight-col">Exactly one</td><td>Every row on this side must have exactly one match</td><td>Every order has exactly one customer</td></tr>
+            <tr><td style="font:800 22px var(--font-mono); color:var(--blue-dark);">──o|</td><td class="highlight-col">Zero or one</td><td>A match is optional, but never more than one</td><td>An order has zero or one refund</td></tr>
+            <tr><td style="font:800 22px var(--font-mono); color:var(--blue-dark);">──|{</td><td class="highlight-col">One or many</td><td>At least one match is required, could be more</td><td>Every order holds at least one product — the ORDER_ITEMS case coming up</td></tr>
+            <tr><td style="font:800 22px var(--font-mono); color:var(--blue-dark);">──o{</td><td class="highlight-col">Zero or many</td><td>A match is optional, and could be several</td><td>A customer may have zero or many orders</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:14px; font:16px var(--font-sans); color:var(--ink-faint);">Read each line from the entity you're standing at: <code style="font-family:var(--font-mono);">CUSTOMERS ||──o{ ORDERS</code> says "one customer, zero-or-many orders."</p>
+      </div>
+      <div class="notes"><b>Say</b> The symbols are the alphabet; the next slide is our actual diagram. Read it from each box outward: "exactly one customer" on the left end, "zero or many orders" on the right end.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="What is an ER diagram?">
+      <div class="kicker">Part 2 &middot; Data Modeling</div>
+      <h1 class="title">What is an ER diagram?</h1>
+      <div class="body-area">
+        <div class="defs">
+          <div class="def"><div class="def__term">ER diagram</div><div class="def__body">"Entity-Relationship diagram" — a picture of a database's design: every entity as a box, every attribute listed inside it, every relationship as a line with cardinality.</div></div>
+          <div class="def"><div class="def__term">Why draw it</div><div class="def__body">It's the design done <i>before</i> SQL — cheap to redraw, expensive to redo once it's fifty CREATE TABLE statements.</div></div>
+          <div class="def"><div class="def__term">What it becomes</div><div class="def__body">Each box → a CREATE TABLE. Each attribute → a column. Each line → a foreign key. Nothing is lost in translation.</div></div>
+        </div>
+      </div>
+      <div class="notes"><b>Say</b> This is the tool — next slide is our actual one, for this store.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="The ER diagram for our store">
+      <div class="kicker">Part 2 &middot; Data Modeling</div>
+      <h1 class="title">The ER diagram for our store</h1>
+      <div class="erwrap">
+        <svg viewBox="0 0 1136 500" width="1136" height="500">
+          <!-- relationship lines -->
+          <path d="M 195,140 V 160 H 480 V 175" fill="none" stroke="#3D6D9E" stroke-width="1.8"/>
+          <path d="M 568,140 V 175" fill="none" stroke="#3D6D9E" stroke-width="1.8"/>
+          <path d="M 941,140 V 160 H 656 V 175" fill="none" stroke="#3D6D9E" stroke-width="1.8"/>
+
+          <!-- "exactly one" ends: double bar at the entity side -->
+          <g stroke="#3D6D9E" stroke-width="1.8">
+            <path d="M 189,147 H 201 M 189,152 H 201"/>
+            <path d="M 562,147 H 574 M 562,152 H 574"/>
+            <path d="M 935,147 H 947 M 935,152 H 947"/>
+          </g>
+
+          <!-- "zero or many" ends: circle + crow's foot at the ORDERS side -->
+          <g stroke="#3D6D9E" stroke-width="1.8" fill="#fff">
+            <circle cx="480" cy="166" r="4"/>
+            <circle cx="568" cy="163" r="4"/>
+            <circle cx="656" cy="166" r="4"/>
+          </g>
+          <g stroke="#3D6D9E" stroke-width="1.8" fill="none">
+            <path d="M 480,175 L 472,185 M 480,175 V 185 M 480,175 L 488,185"/>
+            <path d="M 568,175 L 560,185 M 568,175 V 185 M 568,175 L 576,185"/>
+            <path d="M 656,175 L 648,185 M 656,175 V 185 M 656,175 L 664,185"/>
+          </g>
+
+          <!-- the many-to-many that ORDERS resolves -->
+          <g>
+            <rect x="776" y="200" width="330" height="152" rx="6" fill="#E7F4EC" stroke="#2E7D4F" stroke-width="1.5"/>
+            <text x="792" y="224" font-family="Arial" font-weight="700" font-size="14" fill="#1F5E3B">Customers &#8596; Products: many-to-many</text>
+            <text x="792" y="248" font-family="Arial" font-size="13" fill="#1F5E3B">One customer buys many products;</text>
+            <text x="792" y="266" font-family="Arial" font-size="13" fill="#1F5E3B">one product is bought by many customers.</text>
+            <text x="792" y="292" font-family="Arial" font-size="13" fill="#1F5E3B">No direct line, because ORDERS resolves it:</text>
+            <text x="792" y="310" font-family="Arial" font-size="13" fill="#1F5E3B">each order pairs 1 customer with 1 product,</text>
+            <text x="792" y="328" font-family="Arial" font-weight="700" font-size="13" fill="#1F5E3B">so one M:N becomes two 1:N lines.</text>
+          </g>
+          <g>
+            <rect x="30" y="40" width="330" height="32" fill="#687F91"/>
+            <text x="46" y="62" font-family="Arial" font-weight="700" font-size="17" fill="#fff">CUSTOMERS</text>
+            <rect x="30" y="72" width="330" height="68" fill="#fff" stroke="#DCE3EA"/>
+            <text x="46" y="94" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#1F3864" font-weight="700">PK</text>
+            <text x="80" y="94" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#141517">customerID   INT</text>
+            <text x="80" y="114" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#4B5563">firstName, lastName, birthDate</text>
+            <text x="80" y="132" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#4B5563">moneySpent, anniversary</text>
+          </g>
+          <g>
+            <rect x="403" y="40" width="330" height="32" fill="#687F91"/>
+            <text x="419" y="62" font-family="Arial" font-weight="700" font-size="17" fill="#fff">EMPLOYEES</text>
+            <rect x="403" y="72" width="330" height="68" fill="#fff" stroke="#DCE3EA"/>
+            <text x="419" y="94" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#1F3864" font-weight="700">PK</text>
+            <text x="453" y="94" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#141517">employeeID   INT</text>
+            <text x="453" y="114" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#4B5563">firstName, lastName</text>
+            <text x="453" y="132" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#4B5563">birthDate</text>
+          </g>
+          <g>
+            <rect x="776" y="40" width="330" height="32" fill="#687F91"/>
+            <text x="792" y="62" font-family="Arial" font-weight="700" font-size="17" fill="#fff">PRODUCTS</text>
+            <rect x="776" y="72" width="330" height="68" fill="#fff" stroke="#DCE3EA"/>
+            <text x="792" y="94" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#1F3864" font-weight="700">PK</text>
+            <text x="826" y="94" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#141517">productID    INT</text>
+            <text x="826" y="114" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#4B5563">category, price</text>
+          </g>
+          <g>
+            <rect x="403" y="185" width="330" height="32" fill="#1F3864"/>
+            <text x="419" y="207" font-family="Arial" font-weight="700" font-size="17" fill="#fff">ORDERS</text>
+            <rect x="403" y="217" width="330" height="150" fill="#fff" stroke="#DCE3EA"/>
+            <text x="419" y="239" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#1F3864" font-weight="700">PK</text>
+            <text x="453" y="239" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#141517">orderID      INT</text>
+            <text x="419" y="259" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#3D6D9E" font-weight="700">FK</text>
+            <text x="453" y="259" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#141517">customerID   INT</text>
+            <text x="419" y="279" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#3D6D9E" font-weight="700">FK</text>
+            <text x="453" y="279" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#141517">employeeID   INT</text>
+            <text x="419" y="299" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#3D6D9E" font-weight="700">FK</text>
+            <text x="453" y="299" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#141517">productID    INT</text>
+            <text x="453" y="319" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#4B5563">orderTotal   DECIMAL(10,2)</text>
+            <text x="453" y="339" font-family="SFMono-Regular,Consolas,monospace" font-size="14" fill="#4B5563">orderDate    DATE</text>
+            <text x="419" y="357" font-family="Arial" font-style="italic" font-size="12" fill="#8A94A3">the EVENT — no names, no prices, only references</text>
+          </g>
+          <!-- legend strip -->
+          <g font-family="Arial" font-size="12" fill="#8A94A3">
+            <text x="30" y="420">Line ends:  ‖ exactly one  ·  o{ zero or many  —  read each line from the box you're standing at.</text>
+          </g>
+        </svg>
+      </div>
+      <div class="notes"><b>Say</b> Read one relationship aloud: "one customer places zero-or-many orders; each order is placed by exactly one customer." Then compare box-by-box to the Lecture 1 schema slide — same four tables.</div>
+    </section>
+
+    <section class="slide slide--question" data-title="Q: what identifies a customer?">
+      <div class="qmark">?</div>
+      <h1>We have no email, no phone number — just names and a birth date. What identifies a customer?</h1>
+      <div class="hint">Pause here. Take answers before advancing.</div>
+      <div class="notes"><b>Ask the room.</b> Let them propose first name, then first+last, then argue about collisions before you reveal the composite-key reasoning.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="First name? First+last? Not enough.">
+      <div class="kicker">Part 2 &middot; Data Modeling</div>
+      <h1 class="title">First name? First + last? Not enough.</h1>
+      <div class="body-area">
+        <ul class="points">
+          <li><span class="neg">✕</span> <b>First name?</b> Obviously not.</li>
+          <li><span class="neg">✕</span> <b>First + last name?</b> Two people can both be "Anna Sargsyan."</li>
+          <li><b>First + last + birthDate?</b> Now it's <i>probably</i> unique — a <b>composite natural key</b>, three attributes doing the job of one.</li>
+          <li><b>But it's fragile:</b> three columns to carry everywhere, one typo breaks the link, and it still isn't <i>guaranteed</i> unique.</li>
+        </ul>
+        <div class="callout callout--green" style="margin-top:14px; max-width:920px;"><b>Real systems go further</b>Record linkage, fuzzy matching, probabilistic dedup — entire techniques exist just to decide "is this the same person?" Out of scope today; the honest answer is that even our three-column key is a bet, not a proof.</div>
+      </div>
+      <div class="notes"><b>Say</b> This fragility is exactly what shows up in Part 5's JOIN — three columns, all of them have to match. If someone asks "what if two people share all three?" — that's the record-linkage story: hospitals tune for zero wrong merges, marketing tunes the opposite way; same code, opposite thresholds, and nothing in SQL tells you which. Mention it, move on.</div>
+    </section>
+
+    <section class="slide slide--statement" data-title="customerID: the surrogate key">
+      <div class="big-line">So we invent <em>customerID</em>.</div>
+      <div class="stat-label" style="margin-top:18px; max-width:760px;">One small integer. Means nothing outside the database. Never changes. A <b>surrogate key</b> — the PK you saw on CUSTOMERS in the diagram.</div>
+      <div class="notes"><b>Say</b> Now you know why it's there, not just that it is. Real systems assign it at signup — identity is recorded, never reconstructed.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Optional: moneySpent, stored or computed?">
+      <div class="kicker">Part 2 &middot; Optional aside</div>
+      <h1 class="title">moneySpent: stored, or computed?</h1>
+      <div class="cols">
+        <div class="col">
+          <ul class="points">
+            <li>It's the sum of that customer's orders — the database can compute it any time.</li>
+            <li>Storing it means every new order must also <i>update</i> it.</li>
+            <li>If that update ever fails, the stored number silently disagrees with reality.</li>
+          </ul>
+        </div>
+        <div class="col col--narrow">
+          <div class="panel">
+            <div class="panel__head">Trade-off</div>
+            <div class="panel__body"><ul class="points tight"><li><b>Stored:</b> fast to read, can drift</li><li><b>Computed:</b> always correct, costs a JOIN</li></ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes"><b>Say</b> Skip if short on time — it pays off in Part 7, not load-bearing right now.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="What if one order held many products?">
+      <div class="kicker">Part 2 &middot; Optional aside</div>
+      <h1 class="title">What if one order held many products?</h1>
+      <p class="lede">A real cart holds several products; one product appears in many orders. That's <b>many-to-many</b> — a single foreign key can't hold it.</p>
+      <div class="body-area" style="justify-content:center;">
+        <div class="boxrow">
+          <div class="box"><div class="box__head">Orders</div><div class="box__body" style="font-family:var(--font-sans); color:var(--ink-soft);">one order</div></div>
+          <div class="box box--accent"><div class="box__head">Order_Items</div><div class="box__body" style="font-family:var(--font-sans); color:#fff; background:var(--blue-dark);">junction — two FKs</div></div>
+          <div class="box"><div class="box__head">Products</div><div class="box__body" style="font-family:var(--font-sans); color:var(--ink-soft);">one product</div></div>
+        </div>
+        <p style="text-align:center; margin-top:18px; font:17px var(--font-sans); color:var(--ink-soft);">Every M:N relationship resolves to this same trick — a junction table carrying two foreign keys (plus, here, a quantity). We simplify it away today; it's back next lecture.</p>
+      </div>
+      <div class="notes"><b>Say</b> Every M:N you'll ever model becomes a table: students–courses–enrollments, actors–films–roles. Usually it turns out to be a real business concept that just didn't have a name yet.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Functional dependencies">
+      <div class="kicker">Part 2 &middot; Data Modeling</div>
+      <h1 class="title">A &rarr; B: A determines B</h1>
+      <p class="lede">Attribute A <b>functionally determines</b> attribute B if every value of A is associated with exactly one value of B.</p>
+      <div class="body-area">
+        <div class="code" style="font-size:22px;">orderID <span class="kw">&rarr;</span> orderDate                             <span class="com">-- one order, one date</span>
+orderID <span class="kw">&rarr;</span> customerFirstName                     <span class="com">-- the key determines everything</span>
+(firstName, lastName, birthDate) <span class="kw">&rarr;</span> moneySpent  <span class="com">-- the interesting one</span></div>
+        <p style="margin-top:22px; font:18px/1.5 var(--font-sans); color:var(--ink-soft); max-width:980px;">The first two are trivial — <code style="font-family:var(--font-mono);">orderID</code> is the key, so of course it determines the row. The third one is the point: <b>moneySpent depends on which customer this is, not which order</b>. That's a dependency <i>between non-key columns</i>, and it's what normal forms give you a name for.</p>
+      </div>
+      <div class="notes"><b>Say</b> orderID trivially determines the whole row. The dependencies worth noticing are between the other columns.</div>
+    </section>
+
+    <section class="slide slide--statement" data-title="The transitive chain">
+      <div class="code" style="font-size:24px; text-align:left; display:inline-block;">orderID &rarr; (firstName, lastName, birthDate) &rarr; moneySpent</div>
+      <div class="stat-label" style="margin-top:26px; max-width:880px;">moneySpent depends on <i>which customer</i> this is — not on the order. Key &rarr; non-key &rarr; another non-key: that's a <b>transitive dependency</b>, and it's the whole mechanism behind Part 1's redundancy.</div>
+      <div class="notes"><b>Say</b> Same chain exists for every employee and product attribute too.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="1NF — one value per cell">
+      <div class="kicker">Part 2 &middot; Normal Forms</div>
+      <h1 class="title">1NF — one value per cell</h1>
+      <p class="lede">A normal form is a rule a table either satisfies or doesn't, each aimed at one kind of redundancy. The first rule: every cell holds exactly one value — no lists, no repeating groups.</p>
+      <div class="cols">
+        <div class="col">
+          <div class="panel" style="height:100%;">
+            <div class="panel__head" style="background:var(--red);">Breaks 1NF — a multi-item order squeezed into one row</div>
+            <div class="panel__body">
+              <table class="cmp compact">
+                <thead><tr><th>orderID</th><th>customer</th><th>productCategory</th></tr></thead>
+                <tbody>
+                  <tr><td class="key">1005</td><td>Aram</td><td class="bad">Audio, Keyboards</td></tr>
+                  <tr><td class="key">1016</td><td>Narek</td><td>Laptops</td></tr>
+                </tbody>
+              </table>
+              <p style="margin:10px 0 0; font:14px/1.4 var(--font-sans); color:var(--ink-soft);">Two values in one cell. You can't filter, count or join on "Keyboards" — it's trapped inside a string.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="panel" style="height:100%;">
+            <div class="panel__head" style="background:var(--green);">Fixed — one row per value</div>
+            <div class="panel__body">
+              <table class="cmp compact">
+                <thead><tr><th>orderID</th><th>customer</th><th>productCategory</th></tr></thead>
+                <tbody>
+                  <tr><td class="key">1005</td><td>Aram</td><td>Audio</td></tr>
+                  <tr><td class="key">1005</td><td>Aram</td><td>Keyboards</td></tr>
+                  <tr><td class="key">1016</td><td>Narek</td><td>Laptops</td></tr>
+                </tbody>
+              </table>
+              <p style="margin:10px 0 0; font:14px/1.4 var(--font-sans); color:var(--ink-soft);">Notice the cost: orderID alone no longer identifies a row. The key became <b>(orderID, productCategory)</b> — a composite key. That's what 2NF is about.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout callout--green" style="margin-top:14px;"><b>Our sales_raw</b>Passes 1NF already — one date, one price, one category per row.</div>
+      <div class="notes"><b>Say</b> The left table is a hypothetical shop, not our file. Our sales_raw passes 1NF — the point is what the fix costs you: a composite key.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="2NF — nothing depends on half the key">
+      <div class="kicker">Part 2 &middot; Normal Forms</div>
+      <h1 class="title">2NF — nothing depends on only part of the key</h1>
+      <p class="lede">Only bites when the key has more than one column. Key here: <b>(orderID, productID)</b>.</p>
+      <div class="cols">
+        <div class="col">
+          <div class="panel" style="height:100%;">
+            <div class="panel__head" style="background:var(--red);">Breaks 2NF — category rides along on a two-column key</div>
+            <div class="panel__body">
+              <table class="cmp compact">
+                <thead><tr><th>orderID</th><th>productID</th><th>quantity</th><th>productCategory</th></tr></thead>
+                <tbody>
+                  <tr><td class="key">1005</td><td class="key">5</td><td>2</td><td class="bad">Audio</td></tr>
+                  <tr><td class="key">1034</td><td class="key">4</td><td>3</td><td class="bad">Keyboards</td></tr>
+                  <tr><td class="key">1016</td><td class="key">3</td><td>1</td><td class="bad">Laptops</td></tr>
+                  <tr><td class="key">1032</td><td class="key">3</td><td>2</td><td class="bad">Laptops</td></tr>
+                </tbody>
+              </table>
+              <p style="margin:10px 0 0; font:14px/1.4 var(--font-sans); color:var(--ink-soft);">Look at the two rows with productID 3: <b>quantity</b> differs (1 vs 2) — it depends on the whole key. <b>productCategory</b> is "Laptops" both times — it depends on productID <i>alone</i>, half the key. Rename the category and you fix it in every order row: a <b>partial dependency</b>.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="panel" style="height:100%;">
+            <div class="panel__head" style="background:var(--green);">Fixed — split by what depends on what</div>
+            <div class="panel__body">
+              <div class="tblcap">ORDER_ITEMS — key (orderID, productID)</div>
+              <table class="cmp compact tight">
+                <thead><tr><th>orderID</th><th>productID</th><th>quantity</th></tr></thead>
+                <tbody>
+                  <tr><td class="key">1005</td><td class="key">5</td><td>2</td></tr>
+                  <tr><td class="key">1034</td><td class="key">4</td><td>3</td></tr>
+                  <tr><td class="key">1016</td><td class="key">3</td><td>1</td></tr>
+                  <tr><td class="key">1032</td><td class="key">3</td><td>2</td></tr>
+                </tbody>
+              </table>
+              <div class="tblcap">PRODUCTS — key (productID)</div>
+              <table class="cmp compact tight">
+                <thead><tr><th>productID</th><th>category</th></tr></thead>
+                <tbody>
+                  <tr><td class="key">3</td><td>Laptops</td></tr>
+                  <tr><td class="key">4</td><td>Keyboards</td></tr>
+                  <tr><td class="key">5</td><td>Audio</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout callout--green" style="margin-top:14px;"><b>Our sales_raw</b>Passes 2NF trivially — its key is the single column orderID, so there is no "part of the key" for anything to depend on.</div>
+      <div class="notes"><b>Say</b> This is the ORDER_ITEMS table from the aside, with one column too many. Ids here are illustrative — yours will differ.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="3NF — nothing depends on a non-key column">
+      <div class="kicker">Part 2 &middot; Normal Forms</div>
+      <h1 class="title">3NF — nothing depends on a non-key column</h1>
+      <p class="lede">Key: <b>orderID</b>. Rule: every other column must depend on the key directly — not on some other non-key column. This is the one our file breaks.</p>
+      <div class="cols">
+        <div class="col">
+          <div class="panel" style="height:100%;">
+            <div class="panel__head" style="background:var(--red);">Breaks 3NF — our sales_raw</div>
+            <div class="panel__body">
+              <table class="cmp compact">
+                <thead><tr><th>orderID</th><th>customer</th><th>birthDate</th><th>moneySpent</th></tr></thead>
+                <tbody>
+                  <tr><td class="key">1005</td><td>Aram Vardanyan</td><td class="bad">1997-12-09</td><td class="bad">3564.77</td></tr>
+                  <tr><td class="key">1031</td><td>Aram Vardanyan</td><td class="bad">1997-12-09</td><td class="bad">3564.77</td></tr>
+                  <tr><td class="key">1016</td><td>Narek Manukyan</td><td>1992-09-03</td><td>1679.38</td></tr>
+                </tbody>
+              </table>
+              <p style="margin:10px 0 0; font:14px/1.4 var(--font-sans); color:var(--ink-soft);">orderID &rarr; customer &rarr; birthDate, moneySpent. The last two depend on <i>which customer</i>, not on the order — so they're stored once per order instead of once per customer. A <b>transitive dependency</b>.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="panel" style="height:100%;">
+            <div class="panel__head" style="background:var(--green);">Fixed — the split you build in Parts 4–5</div>
+            <div class="panel__body">
+              <div class="tblcap">ORDERS — key (orderID)</div>
+              <table class="cmp compact">
+                <thead><tr><th>orderID</th><th>customerID</th></tr></thead>
+                <tbody>
+                  <tr><td class="key">1005</td><td>4</td></tr>
+                  <tr><td class="key">1031</td><td>4</td></tr>
+                  <tr><td class="key">1016</td><td>7</td></tr>
+                </tbody>
+              </table>
+              <div class="tblcap">CUSTOMERS — key (customerID)</div>
+              <table class="cmp compact">
+                <thead><tr><th>customerID</th><th>name</th><th>birthDate</th><th>moneySpent</th></tr></thead>
+                <tbody>
+                  <tr><td class="key">4</td><td>Aram Vardanyan</td><td>1997-12-09</td><td>3564.77</td></tr>
+                  <tr><td class="key">7</td><td>Narek Manukyan</td><td>1992-09-03</td><td>1679.38</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout callout--red" style="margin-top:14px;"><b>Verdict</b>sales_raw FAILS 3NF — and this is exactly the redundancy you counted in Part 1. Aram's birth date now lives in one row, not seven.</div>
+      <div class="notes"><b>Say</b> Ids here are illustrative — SERIAL assigns them in whatever order DISTINCT returns, so yours will differ. Same chain exists for every employee and product column. Parts 4–5 are the fix.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Normal forms: three rules, one verdict each">
+      <div class="kicker">Part 2 &middot; Normal Forms</div>
+      <h1 class="title">Three rules, one verdict each</h1>
+      <div class="body-area">
+        <table class="cmp">
+          <thead><tr><th style="width:90px;">Form</th><th>Rule</th><th style="width:250px;">What breaks it</th><th style="width:190px;">sales_raw</th></tr></thead>
+          <tbody>
+            <tr><th>1NF</th><td>Every cell holds exactly one value — no lists, no repeating groups.</td><td>"Audio, Keyboards" in one cell</td><td class="yes">passes</td></tr>
+            <tr><th>2NF</th><td>No non-key column depends on only <i>part</i> of a composite key.</td><td>category depending on productID alone</td><td class="yes">passes — single-column key</td></tr>
+            <tr><th>3NF</th><td>No non-key column depends on another non-key column.</td><td>moneySpent depending on the customer, not the order</td><td class="no">FAILS — transitive chain</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:14px; font:17px var(--font-sans); color:var(--ink-soft);">Each form fixes the previous one's leftover: 1NF's fix creates composite keys (2NF's problem); 2NF's fix leaves non-key columns depending on each other (3NF's problem). Most real schemas stop at 3NF.</p>
+      </div>
+      <div class="notes"><b>Say</b> 1NF and 2NF pass almost by accident here — 3NF is the one worth the time. If someone says "2NF passing automatically feels like a cheat" — agree. It only has content with a composite key; that's why ORDER_ITEMS is where it bites.</div>
+    </section>
+
+    <section class="slide slide--statement" data-title="You already normalized it by hand">
+      <div class="big-line">You normalized <em>sales_raw</em> by hand — before you had a name for what you were doing.</div>
+      <div class="stat-label" style="margin-top:22px; max-width:860px;">Splitting into four tables in Parts 4–5 <i>is</i> third normal form. Most real schemas stop there — BCNF/4NF/5NF cost more joins than they're usually worth.</div>
+      <div class="notes"><b>Say</b> Pulling customer attributes into their own table breaks the transitive chain — customers.moneySpent depends only on customers.customerID.</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 3 — Why SQL">
+      <div class="num">03</div>
+      <div class="kicker">Part 3</div>
+      <h1 class="title">Why SQL</h1>
+      <p class="lede">Declarative vs. procedural, a short history, and the five sub-languages.</p>
+      <div class="notes"><b>Say</b> We modeled four tables — now we need a language to build, fill and recombine them.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Four tables now need a language">
+      <div class="kicker">Part 3 &middot; Why SQL</div>
+      <h1 class="title">Splitting the data created a new problem</h1>
+      <p class="lede">One business question now needs data pulled correctly from four places at once, every time — without writing a loop by hand.</p>
+      <div class="body-area">
+        <ul class="points">
+          <li>"Show me this month's receipts" now means: find the order, look up its customer, its employee, its product — separately.</li>
+          <li>Do that by hand in Python or Excel and you're rebuilding a query engine, badly.</li>
+        </ul>
+        <div class="callout callout--green" style="margin-top:16px; max-width:820px;"><b>That language is SQL</b>Defines the tables, fills them, and recombines them on demand.</div>
+      </div>
+      <div class="notes"><b>Say</b> This motivates SQL as a consequence of modeling, not a separate topic. If someone asks "why split at all if a JOIN puts it back?" — splitting isn't about reading, it's about writing: fixing a birth date is one statement here, 42 in the flat file.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="SQL is declarative">
+      <div class="kicker">Part 3 &middot; Why SQL</div>
+      <h1 class="title">You state the goal. The system chooses the method.</h1>
+      <div class="cols">
+        <div class="col">
+          <div class="panel">
+            <div class="panel__head">Excel / Python — HOW</div>
+            <div class="panel__body"><ul class="points tight"><li>Loop through the rows</li><li>Check each one</li><li>Collect the matches</li></ul></div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="panel">
+            <div class="panel__head blue">SQL — WHAT</div>
+            <div class="panel__body"><ul class="points tight"><li>"The customers born before 1990."</li><li>The database decides which file, what order, which shortcut.</li></ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="callout callout--green" style="margin-top:18px;"><b>Why this matters</b>The same statement can run in 10ms or 10 minutes — a later lecture is entirely about asking the database why it chose what it chose.</div>
+      <div class="notes"><b>Say</b> Sit with this a moment — it's the single most important idea in the lecture.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="A short history">
+      <div class="kicker">Part 3 &middot; Why SQL</div>
+      <h1 class="title">Almost nothing from 1974 is still in daily use. SQL is.</h1>
+      <div class="body-area">
+        <div class="defs">
+          <div class="def"><div class="def__term">1970</div><div class="def__body">Edgar Codd, IBM, publishes the relational model: store data in plain tables, let a language do the navigating.</div></div>
+          <div class="def"><div class="def__term">1974</div><div class="def__body">IBM System R builds SEQUEL, later renamed SQL.</div></div>
+          <div class="def"><div class="def__term">1979</div><div class="def__body">Oracle ships the first commercial SQL database.</div></div>
+          <div class="def"><div class="def__term">1986</div><div class="def__body">SQL becomes an ANSI standard.</div></div>
+          <div class="def"><div class="def__term">Today</div><div class="def__body">Still the standard, fifty years later — that's why it's worth a semester.</div></div>
+        </div>
+      </div>
+      <div class="notes"><b>Say</b> That's why it's worth a semester.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="The five sub-languages">
+      <div class="kicker">Part 3 &middot; Why SQL</div>
+      <h1 class="title">Every statement goes in one of five drawers</h1>
+      <div class="body-area">
+        <table class="vocab">
+          <thead><tr><th style="width:110px;">Part</th><th style="width:280px;">Does</th><th>Statements</th></tr></thead>
+          <tbody>
+            <tr><td class="term">DDL</td><td>Defines structure</td><td>CREATE, ALTER, DROP</td></tr>
+            <tr><td class="term">DML</td><td>Changes data</td><td>INSERT, UPDATE, DELETE</td></tr>
+            <tr><td class="term">DQL</td><td>Reads data</td><td>SELECT</td></tr>
+            <tr><td class="term">DCL</td><td>Controls access</td><td>GRANT, REVOKE</td></tr>
+            <tr><td class="term">TCL</td><td>Groups changes</td><td>COMMIT, ROLLBACK</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:14px; font:17px var(--font-sans); color:var(--ink-soft);">Today: DDL &rarr; DML &rarr; DQL, in order. DCL and TCL come later in the course. DDL itself bookends today — CREATE now, ALTER/DROP in Part 9.</p>
+      </div>
+      <div class="notes"><b>Say</b> Every SQL statement this whole semester fits in one of these five rows.</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 4 — DDL: creating the tables">
+      <div class="num">04</div>
+      <div class="kicker">Part 4</div>
+      <h1 class="title">DDL: creating the tables</h1>
+      <p class="lede">Types, constraints, and the rules PostgreSQL enforces the moment you type CREATE TABLE.</p>
+      <div class="notes"><b>Say</b> Time to implement the ER diagram from Part 2 — exactly the schema slide, now as real SQL.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Types are enforced rules, not labels">
+      <div class="kicker">Part 4 &middot; DDL</div>
+      <h1 class="title">Every type is a rule, not a label</h1>
+      <div class="body-area">
+        <table class="vocab">
+          <thead><tr><th style="width:210px;">Type</th><th style="width:340px;">Meaning</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td class="term">INT</td><td>Whole number</td><td>ids, counts</td></tr>
+            <tr><td class="term">VARCHAR(50)</td><td>Text, max 50 characters</td><td>TEXT performs identically in Postgres</td></tr>
+            <tr><td class="term">DATE</td><td>A calendar date</td><td>real date arithmetic</td></tr>
+            <tr><td class="term">DECIMAL(10,2)</td><td>Exact decimal, 10 digits, 2 after the point</td><td>the money type — moneySpent, orderTotal</td></tr>
+            <tr><td class="term">DECIMAL(8,2)</td><td>Same, smaller range</td><td>used for price</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="notes"><b>Say</b> The database enforces every one of these for you, on every write.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Text sorts wrong">
+      <div class="kicker">Part 4 &middot; DDL</div>
+      <h1 class="title">Stored as text, price sorts wrong</h1>
+      <p class="lede">Text sorts character by character, not by value — this is why <code style="font-family:var(--font-mono);">price</code> is DECIMAL, never text.</p>
+      <div class="cols">
+        <div class="col">
+          <div class="panel">
+            <div class="panel__head" style="background:var(--red);">As text — ORDER BY price</div>
+            <div class="panel__body" style="font-family:var(--font-mono); font-size:19px; line-height:1.9;">
+              '100.00'<br>'52.00'<br>'9.99'
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="panel">
+            <div class="panel__head" style="background:var(--green);">As DECIMAL — ORDER BY price</div>
+            <div class="panel__body" style="font-family:var(--font-mono); font-size:19px; line-height:1.9;">
+              9.99<br>52.00<br>100.00
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout callout--green" style="margin-top:16px;"><b>Same logic, everywhere</b>0.1 + 0.2 is exactly 0.3 — only if the type promises it. That's why money is DECIMAL and never a float, anywhere in this schema.</div>
+      <div class="notes"><b>Say</b> Run it live: SELECT unnest(ARRAY['9.99','52.00','100.00']) ORDER BY 1. 100 sorts before 52 sorts before 9.99 — the opposite of numeric order.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Naming, and VARCHAR vs TEXT">
+      <div class="kicker">Part 4 &middot; DDL &middot; Caveats</div>
+      <h1 class="title">Two things that surprise people</h1>
+      <div class="body-area">
+        <div class="defs">
+          <div class="def"><div class="def__term">Naming</div><div class="def__body">PostgreSQL folds unquoted identifiers to lowercase — <code style="font-family:var(--font-mono);">customerID</code> becomes <code style="font-family:var(--font-mono);">customerid</code> in every output, every error message, every \d.</div></div>
+          <div class="def"><div class="def__term">VARCHAR vs TEXT</div><div class="def__body">They perform <i>identically</i> in PostgreSQL — no speed difference, no storage difference. The length in VARCHAR(50) is a constraint you're choosing, not an optimization you're making.</div></div>
+        </div>
+      </div>
+      <div class="notes"><b>Say</b> Neither of these is a bug — both surprise almost everyone the first time.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Creation order, and SERIAL">
+      <div class="kicker">Part 4 &middot; DDL &middot; Caveats</div>
+      <h1 class="title">Order matters. IDs aren't yours to give.</h1>
+      <div class="body-area">
+        <div class="defs">
+          <div class="def"><div class="def__term">Creation order</div><div class="def__body">A referenced table must exist before the table that references it — customers, employees and products before orders. Try it backwards and read the error.</div></div>
+          <div class="def"><div class="def__term">SERIAL</div><div class="def__body">Generates ids for you. You never INSERT a customerID — the database assigns the next one, and you find out what it was by asking, not by guessing.</div></div>
+          <div class="def"><div class="def__term">No gaps? No.</div><div class="def__body">A failed or rolled-back insert still consumes its number. SERIAL ids are unique, not consecutive — never assume the max id equals the row count.</div></div>
+        </div>
+      </div>
+      <div class="notes"><b>Say</b> Try creating orders first — the error you get is the lesson. The gaps point pre-empts the question someone always asks in week 6.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Six words, six promises">
+      <div class="kicker">Part 4 &middot; DDL</div>
+      <h1 class="title">Six words, six promises</h1>
+      <div class="body-area">
+        <table class="vocab">
+          <thead><tr><th style="width:220px;">Constraint</th><th>What it promises</th></tr></thead>
+          <tbody>
+            <tr><td class="term">PRIMARY KEY</td><td>Uniquely identifies a row. Never null, never duplicated — one per table, and what foreign keys point at.</td></tr>
+            <tr><td class="term">REFERENCES</td><td>This value must already exist in the other table.</td></tr>
+            <tr><td class="term">UNIQUE</td><td>No two rows may share this value. Unlike PRIMARY KEY: many per table, and NULLs allowed.</td></tr>
+            <tr><td class="term">NOT NULL</td><td>This fact is required.</td></tr>
+            <tr><td class="term">CHECK</td><td>A rule you invent, enforced on every write.</td></tr>
+            <tr><td class="term">SERIAL</td><td>Auto-incrementing — the database generates the id.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="notes"><b>Say</b> These six words are doing all the work in the "Business Impact" line from Lecture 1. If asked why birthDate is nullable but firstName isn't: you can't have a customer without a name; you can have one whose birth date you don't know. NOT NULL means "the business can't function without this."</div>
+    </section>
+
+    <section class="slide slide--content" data-title="One reference, enforced">
+      <div class="kicker">Part 4 &middot; DDL</div>
+      <h1 class="title">One reference, enforced</h1>
+      <p class="lede">A foreign key is a promise the database checks on every write. Notice what's <i>not</i> here: no customer name, no category, no price — only ids.</p>
+      <div class="body-area">
+<div class="code"><span class="kw">CREATE TABLE</span> orders (
+    orderID     <span class="ty">INT</span> <span class="kw">PRIMARY KEY</span>,
+    customerID  <span class="ty">INT</span> <span class="kw">NOT NULL</span> <span class="kw">REFERENCES</span> <span class="fn">customers</span>(customerID),
+    employeeID  <span class="ty">INT</span> <span class="kw">NOT NULL</span> <span class="kw">REFERENCES</span> <span class="fn">employees</span>(employeeID),
+    productID   <span class="ty">INT</span> <span class="kw">NOT NULL</span> <span class="kw">REFERENCES</span> <span class="fn">products</span>(productID),
+    orderTotal  <span class="ty">DECIMAL(10,2)</span> <span class="kw">CHECK</span> (orderTotal &gt;= <span class="num">0</span>),
+    orderDate   <span class="ty">DATE</span> <span class="kw">NOT NULL</span>
+);</div>
+      </div>
+      <div class="notes"><b>Say</b> Point at REFERENCES — this one word is what makes an impossible order impossible. Each fact lives in exactly one place — the same FK lines from the ER diagram. Why is orderID INT here and SERIAL elsewhere? Because the ids already exist in the source file; we keep them rather than invent new ones.</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 5 — DML: filling the tables">
+      <div class="num">05</div>
+      <div class="kicker">Part 5</div>
+      <h1 class="title">DML: filling the tables</h1>
+      <p class="lede">One row by hand first. Then, in bulk: DISTINCT removes the redundancy, JOIN translates names into ids.</p>
+      <div class="notes"><b>Say</b> Parents first, children last — the foreign keys won't allow otherwise.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Manual INSERT, UPDATE, DELETE">
+      <div class="kicker">Part 5 &middot; DML</div>
+      <h1 class="title">By hand, one row at a time</h1>
+      <p class="lede">Bulk-loading from sales_raw is the special case — these three are the everyday statements.</p>
+      <div class="cols" style="flex:0 0 auto;">
+        <div class="col">
+<div class="code" style="font-size:15px; padding:18px 20px;"><span class="com">-- one row by hand; RETURNING prints the new id</span>
+<span class="kw">INSERT INTO</span> products (category, price)
+<span class="kw">VALUES</span> (<span class="str">'Tablets'</span>, <span class="num">499.00</span>)
+<span class="kw">RETURNING</span> productID;
+
+<span class="com">-- several rows, one statement</span>
+<span class="kw">INSERT INTO</span> products (category, price)
+<span class="kw">VALUES</span> (<span class="str">'Webcams'</span>, <span class="num">59.00</span>), (<span class="str">'Printers'</span>, <span class="num">189.00</span>);</div>
+        </div>
+        <div class="col">
+<div class="code" style="font-size:15px; padding:18px 20px;"><span class="com">-- change one row; without WHERE, EVERY row</span>
+<span class="kw">UPDATE</span> products
+<span class="kw">SET</span>    price = <span class="num">459.00</span>
+<span class="kw">WHERE</span>  category = <span class="str">'Tablets'</span>;
+
+<span class="com">-- remove them again</span>
+<span class="kw">DELETE FROM</span> products
+<span class="kw">WHERE</span>  category <span class="kw">IN</span> (<span class="str">'Tablets'</span>,<span class="str">'Webcams'</span>,<span class="str">'Printers'</span>);</div>
+        </div>
+      </div>
+      <table class="cmp compact" style="margin-top:12px;">
+        <thead><tr><th style="width:300px;">Rule</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td class="key">Name the columns</td><td>Never rely on column order — it breaks the moment a column is added.</td></tr>
+          <tr><td class="key">Skip SERIAL columns</td><td>The database fills them. <b>RETURNING</b> tells you what it chose — you don't guess.</td></tr>
+          <tr><td class="key">Quote text and dates, never numbers</td><td><code style="font-family:var(--font-mono);">'Tablets'</code>, <code style="font-family:var(--font-mono);">'2024-08-27'</code>, but <code style="font-family:var(--font-mono);">499.00</code>.</td></tr>
+          <tr><td class="key">WHERE on UPDATE and DELETE</td><td>Without it, every row changes — and there is no undo outside a transaction.</td></tr>
+          <tr><td class="key">Parents before children</td><td>INSERT the customer before the order; DELETE the order before the customer. The foreign key enforces both directions.</td></tr>
+        </tbody>
+      </table>
+      <div class="notes"><b>Say</b> Runs at any point after Part 4 — even on empty tables, since products has no parent. RETURNING is the answer to "how do I know which id it got?". The DELETE at the end leaves products exactly as it was, so the 42/8/4/6/42 check later is untouched. Point out the missing WHERE joke: UPDATE without WHERE repriced the whole catalogue.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="DISTINCT removes the redundancy">
+      <div class="kicker">Part 5 &middot; DML</div>
+      <h1 class="title">DISTINCT: 42 rows become 8</h1>
+      <div class="body-area">
+<div class="code" style="font-size:19px;"><span class="kw">INSERT INTO</span> customers (firstName, lastName, birthDate, moneySpent, anniversary)
+<span class="kw">SELECT</span> <span class="kw">DISTINCT</span> customerFirstName, customerLastName, customerBirthDate,
+                customerMoneySpent, customerAnniversary
+<span class="kw">FROM</span> sales_raw;   <span class="com">-- 42 rows in, 8 rows out</span></div>
+        <p style="margin-top:14px; font:17px var(--font-sans); color:var(--ink-soft);">Same pattern fills employees (4 rows) and products (6 rows) — but <code style="font-family:var(--font-mono);">sales_raw</code> has no <code style="font-family:var(--font-mono);">customerID</code> column at all, only names. Translating a name into an id is next.</p>
+      </div>
+      <div class="notes"><b>Say</b> Parents first, children last — try inserting into orders first if you want to see why. Forget DISTINCT and you get 42 customers: the redundancy survived and nothing was gained.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Translating names into ids">
+      <div class="kicker">Part 5 &middot; DML</div>
+      <h1 class="title">Translating names into ids</h1>
+      <div class="body-area">
+<div class="code" style="font-size:17px;"><span class="kw">INSERT INTO</span> orders (orderID, customerID, <span class="com">…</span>, orderTotal, orderDate)
+<span class="kw">SELECT</span> r.orderID, c.customerID, <span class="com">…</span>, r.orderTotal, r.orderDate
+<span class="kw">FROM</span> sales_raw r
+<span class="kw">JOIN</span> customers c <span class="kw">ON</span> c.firstName = r.customerFirstName
+                <span class="kw">AND</span> c.lastName  = r.customerLastName
+                <span class="kw">AND</span> c.birthDate = r.customerBirthDate
+<span class="com">-- …then the same JOIN shape for employees and products</span></div>
+        <p style="margin-top:12px; font:16px var(--font-sans); color:var(--ink-soft);">All <b>three</b> columns of the natural key, matched — the fragility from Part 2, now visible in code. Full statement runs in the terminal.</p>
+      </div>
+      <div class="notes"><b>Say</b> This is the question someone always asks — "why not just keep the columns from sales_raw?" This is the answer. All this ceremony exists only because the source file has no ids; if it did, this would be a plain INSERT … SELECT.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Row-count check: 42/8/4/6/42">
+      <div class="kicker">Part 5 &middot; DML</div>
+      <h1 class="title">Checking your work: 42 / 8 / 4 / 6 / 42</h1>
+      <div class="body-area">
+<div class="code" style="font-size:18px;"><span class="kw">SELECT</span> <span class="str">'orders'</span>, count(*) <span class="kw">FROM</span> orders <span class="com">-- expect 42</span>
+<span class="kw">UNION ALL SELECT</span> <span class="str">'customers'</span>, count(*) <span class="kw">FROM</span> customers; <span class="com">-- expect 8</span></div>
+        <div class="callout callout--red" style="margin-top:18px; max-width:920px;"><b>If orders isn't 42</b>The join is wrong somewhere — this is the most common mistake at this step, and the row count is how you catch it. Fewer than 42: a name didn't match. More than 42: two customer rows matched the same name.</div>
+      </div>
+      <div class="notes"><b>Say</b> Run the full UNION ALL query live — sales_raw / customers / employees / products / orders.</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 6 — DQL: first queries">
+      <div class="num">06</div>
+      <div class="kicker">Part 6</div>
+      <h1 class="title">DQL: first queries</h1>
+      <p class="lede">FROM &rarr; WHERE &rarr; SELECT &rarr; ORDER BY &rarr; LIMIT.</p>
+      <div class="notes"><b>Say</b> Run these live and let students predict the output before each one executes.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="The mental model">
+      <div class="kicker">Part 6 &middot; DQL</div>
+      <h1 class="title">Five clauses, always in the same order</h1>
+      <div class="cols">
+        <div class="col col--narrow">
+          <div class="defs">
+            <div class="def"><div class="def__term">FROM</div><div class="def__body">which table</div></div>
+            <div class="def"><div class="def__term">WHERE</div><div class="def__body">which rows</div></div>
+            <div class="def"><div class="def__term">SELECT</div><div class="def__body">which columns</div></div>
+            <div class="def"><div class="def__term">ORDER BY</div><div class="def__body">in what order</div></div>
+            <div class="def"><div class="def__term">LIMIT</div><div class="def__body">how many</div></div>
+          </div>
+        </div>
+        <div class="col">
+<div class="code" style="font-size:18px;"><span class="kw">SELECT</span> firstName, moneySpent    <span class="com">-- columns</span>
+<span class="kw">FROM</span> customers                  <span class="com">-- table</span>
+<span class="kw">WHERE</span> moneySpent &gt; <span class="num">3000</span>         <span class="com">-- rows</span>
+<span class="kw">ORDER BY</span> moneySpent <span class="kw">DESC</span>        <span class="com">-- order</span>
+<span class="kw">LIMIT</span> <span class="num">5</span>;                        <span class="com">-- how many</span></div>
+        </div>
+      </div>
+      <div class="notes"><b>Say</b> Every query you write this semester is some combination of these five. Note the order you write vs. the order it runs: FROM first, SELECT late — that's why you can't use a SELECT alias in WHERE.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="First queries, live">
+      <div class="kicker">Part 6 &middot; DQL</div>
+      <h1 class="title">First queries, live</h1>
+      <div class="body-area">
+<div class="code"><span class="kw">SELECT</span> * <span class="kw">FROM</span> customers
+<span class="kw">WHERE</span> birthDate &lt; <span class="str">'1990-01-01'</span>;
+
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> products
+<span class="kw">ORDER BY</span> price <span class="kw">DESC</span> <span class="kw">LIMIT</span> <span class="num">5</span>;
+
+<span class="kw">SELECT DISTINCT</span> category <span class="kw">FROM</span> products;</div>
+      </div>
+      <div class="notes"><b>Say</b> Predict the result before you run it, every time — that habit is the whole point of this part.</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 7 — The payoff">
+      <div class="num">07</div>
+      <div class="kicker">Part 7</div>
+      <h1 class="title">The payoff: put it back together</h1>
+      <p class="lede">You broke one table into four. Now watch nothing get lost.</p>
+      <div class="notes"><b>Say</b> Students are quietly uneasy by now — this slide resolves it.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Rejoining: three JOINs, one row per order">
+      <div class="kicker">Part 7 &middot; The Payoff</div>
+      <h1 class="title">Three JOINs, one row per order</h1>
+      <div class="body-area">
+<div class="code" style="font-size:18px;"><span class="kw">SELECT</span> o.orderID, c.firstName, p.category, o.orderTotal
+<span class="kw">FROM</span> orders o
+<span class="kw">JOIN</span> customers c <span class="kw">ON</span> c.customerID = o.customerID
+<span class="kw">JOIN</span> products  p <span class="kw">ON</span> p.productID  = o.productID
+<span class="kw">JOIN</span> employees e <span class="kw">ON</span> e.employeeID = o.employeeID
+<span class="kw">ORDER BY</span> o.orderDate;   <span class="com">-- 42 rows — exactly the file you started with</span></div>
+        <p style="margin-top:14px; font:17px var(--font-sans); color:var(--ink-soft);">This is the exact inverse of the split in Part 5 — same shape, reversed. Splitting is <b>lossless</b>.</p>
+      </div>
+      <div class="notes"><b>Say</b> But now there's one place to fix a birth date, one place to change a price.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Checking moneySpent against reality">
+      <div class="kicker">Part 7 &middot; The Payoff</div>
+      <h1 class="title">Is the stored number still true?</h1>
+      <div class="body-area">
+<div class="code" style="font-size:18px;"><span class="kw">SELECT</span> c.firstName, c.moneySpent <span class="kw">AS</span> stored,
+       <span class="fn">SUM</span>(o.orderTotal) <span class="kw">AS</span> computed
+<span class="kw">FROM</span> customers c <span class="kw">JOIN</span> orders o <span class="kw">ON</span> o.customerID = c.customerID
+<span class="kw">GROUP BY</span> c.customerID, c.firstName, c.moneySpent;</div>
+        <div class="callout callout--red" style="margin-top:16px; max-width:920px;"><b>Ask the room</b>They match today. What happens the first time someone inserts an order and forgets to update moneySpent? That question is most of why the rest of this course exists.</div>
+      </div>
+      <div class="notes"><b>Say</b> Ties back to the Part 2 optional aside on stored vs. computed.</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 8 — Watch the database say no">
+      <div class="num">08</div>
+      <div class="kicker">Part 8</div>
+      <h1 class="title">Watch the database say no</h1>
+      <p class="lede">Three ways to try to corrupt the data — and what stops each one.</p>
+      <div class="notes"><b>Say</b> Run each live, one at a time, and actually read the error message.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Three refusals">
+      <div class="kicker">Part 8 &middot; Constraints</div>
+      <h1 class="title">Three refusals</h1>
+      <div class="body-area">
+        <table class="cmp">
+          <thead><tr><th>Attempt</th><th>Triggering statement</th><th>Violated</th></tr></thead>
+          <tbody>
+            <tr><td>Order for a customer who doesn't exist</td><td style="font-family:var(--font-mono); font-size:15px;">INSERT INTO orders VALUES (9999, 999, ...)</td><td class="highlight-col">foreign key</td></tr>
+            <tr><td>A negative product price</td><td style="font-family:var(--font-mono); font-size:15px;">INSERT INTO products VALUES ('Broken', -50)</td><td class="highlight-col">CHECK</td></tr>
+            <tr><td>A duplicate product category</td><td style="font-family:var(--font-mono); font-size:15px;">INSERT INTO products VALUES ('Laptops', 999)</td><td class="highlight-col">UNIQUE</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="notes"><b>Say</b> Run each live and read the exact error text aloud, every time.</div>
+    </section>
+
+    <section class="slide slide--statement" data-title="A spreadsheet would have accepted all three">
+      <div class="big-line">A spreadsheet would have accepted all three of these. Silently.</div>
+      <div class="stat-label" style="margin-top:20px; max-width:760px;">That is the difference between a file and a database — the thesis of this entire lecture, in one line.</div>
+      <div class="notes"><b>Say</b> Let this one land — it's the thesis of the whole lecture, stated once, plainly.</div>
+    </section>
+
+    <section class="slide slide--section" data-title="Part 9 — ALTER and DROP">
+      <div class="num">09</div>
+      <div class="kicker">Part 9</div>
+      <h1 class="title">ALTER and DROP</h1>
+      <p class="lede">Evolving and retiring a schema — the other two-thirds of DDL.</p>
+      <div class="notes"><b>Say</b> Part 3 promised CREATE, ALTER, DROP. We've only used CREATE until now.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Changing your mind safely">
+      <div class="kicker">Part 9 &middot; ALTER TABLE</div>
+      <h1 class="title">Changing your mind safely</h1>
+      <div class="cols">
+        <div class="col">
+          <ul class="points">
+            <li>Add a column <b>with no DEFAULT</b> — every existing row gets NULL.</li>
+            <li>Can't add NOT NULL while NULLs exist — backfill first, then it works.</li>
+            <li>Rename a column, widen a VARCHAR — both safe. Shrinking can fail if data doesn't fit.</li>
+            <li>Add a named CHECK constraint after the fact — same vocabulary as Part 4.</li>
+          </ul>
+        </div>
+        <div class="col">
+<div class="code" style="font-size:16px;"><span class="kw">ALTER TABLE</span> orders
+  <span class="kw">ADD COLUMN</span> channel <span class="ty">VARCHAR(20)</span>;
+
+<span class="kw">ALTER TABLE</span> orders
+  <span class="kw">ALTER COLUMN</span> channel <span class="kw">SET NOT NULL</span>;
+<span class="com">-- ERROR: contains null values</span>
+
+<span class="kw">ALTER TABLE</span> orders
+  <span class="kw">ADD CONSTRAINT</span> channel_known
+  <span class="kw">CHECK</span> (channel <span class="kw">IN</span> (<span class="str">'in_store'</span>,<span class="str">'online'</span>));</div>
+        </div>
+      </div>
+      <div class="notes"><b>Say</b> Run the SET NOT NULL failure live, then backfill and retry — read the real error both times.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Three ways to make data disappear">
+      <div class="kicker">Part 9 &middot; DELETE / TRUNCATE / DROP</div>
+      <h1 class="title">Three ways to make data disappear</h1>
+      <div class="body-area">
+        <table class="cmp">
+          <thead><tr><th>Statement</th><th>Removes</th><th>Table survives?</th></tr></thead>
+          <tbody>
+            <tr><th>DELETE FROM t WHERE ...</th><td>Matching rows</td><td class="yes">Yes</td></tr>
+            <tr><th>TRUNCATE t</th><td>Every row</td><td class="yes">Yes, empty</td></tr>
+            <tr><th>DROP TABLE t</th><td>The table itself</td><td class="no">No</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:14px; font:17px var(--font-sans); color:var(--ink-soft);">All three refuse to run if another table still points at this one — try each against <code style="font-family:var(--font-mono);">products</code> live. Every refusal is the foreign key doing exactly what Part 4 promised.</p>
+      </div>
+      <div class="notes"><b>Say</b> DELETE, then TRUNCATE, then DROP TABLE — same error family, three different statements. If asked "why doesn't it just delete the orders too?" — ON DELETE CASCADE does exactly that, and it isn't the default because silently deleting financial records is usually a disaster.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="What CASCADE really does">
+      <div class="kicker">Part 9 &middot; A common misconception</div>
+      <h1 class="title">CASCADE doesn't delete your data</h1>
+      <p class="lede"><code style="font-family:var(--font-mono);">DROP TABLE products CASCADE</code> reads like "delete everything that pointed at it." It doesn't.</p>
+      <div class="body-area">
+<div class="code" style="font-size:17px;"><span class="kw">DROP TABLE</span> products <span class="kw">CASCADE</span>;
+<span class="com">-- NOTICE: drop cascades to constraint
+--         orders_productid_fkey on table orders</span></div>
+        <div class="callout callout--green" style="margin-top:16px; max-width:920px;"><b>What actually happens</b>CASCADE drops the dependent <i>constraint</i> on orders — not orders itself, not its rows. orders survives, just unchecked: every productID now points at nothing. Demo this on a disposable pair of tables, never the real schema.</div>
+      </div>
+      <div class="notes"><b>Say</b> Demo this on scratch_categories/scratch_items, never on the real schema. Insert one row first so the survivor visibly has data pointing at nothing — that's the state the foreign key existed to prevent.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Part 9 recap">
+      <div class="kicker">Part 9 &middot; Recap</div>
+      <h1 class="title">Every refusal today was on purpose</h1>
+      <div class="body-area">
+        <ul class="points">
+          <li><b>ALTER</b> added, renamed, retyped and constrained a column — then undid all of it.</li>
+          <li><b>DELETE / TRUNCATE / DROP</b> all refused to touch a row or table another table still points at.</li>
+          <li><b>CASCADE</b> overrides that refusal deliberately — dropping the constraint, never the data, unless you also name the dependent table.</li>
+        </ul>
+      </div>
+      <div class="notes"><b>Say</b> Good closing beat for Part 9 before moving to summary.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Summary">
+      <div class="kicker">Summary</div>
+      <h1 class="title">What today actually built</h1>
+      <div class="body-area">
+        <ul class="points" style="columns:2; column-gap:48px;">
+          <li>Redundancy causes update, insertion and deletion anomalies.</li>
+          <li>Model first: entities, relationships, cardinality, an ER diagram.</li>
+          <li>Composite natural key works but is fragile — invent surrogate ids.</li>
+          <li>A transitive dependency is a 3NF violation — that's what redundancy <i>is</i>.</li>
+          <li>SQL is declarative: DDL defines, DML changes, DQL reads.</li>
+          <li>Primary key identifies &middot; foreign key connects &middot; constraints enforce.</li>
+          <li>Splitting is lossless — JOIN rebuilds the original view.</li>
+          <li>ALTER evolves a schema; DELETE/TRUNCATE/DROP all respect foreign keys.</li>
+        </ul>
+      </div>
+      <div class="notes"><b>Say</b> Ask the room to name one term from this list without looking — good temperature check before moving on.</div>
+    </section>
+
+    <section class="slide slide--content" data-title="Next lecture">
+      <div class="kicker">Next Lecture</div>
+      <h1 class="title">When it's right to break these rules</h1>
+      <div class="body-area">
+        <ul class="points">
+          <li><b>Denormalization</b> — trading redundancy back in, deliberately, for read speed.</li>
+          <li>A proper fix for the <code style="font-family:var(--font-mono);">order_items</code> junction table we deferred today.</li>
+          <li><code style="font-family:var(--font-mono);">moneySpent</code>: stored vs. computed, revisited with the vocabulary to argue it properly.</li>
+        </ul>
+      </div>
+      <div class="notes"><b>Say</b> Good place to stop and take questions.</div>
+    </section>
+
+  </div>
+</div>
+
+<div class="chrome"><div class="chrome__bar" id="bar"></div></div>
+<div class="counter" id="counter">1 / 1</div>
+<div class="deckname">Lecture 2 &middot; From One File to Four Tables</div>
+<div class="notes-bar" id="notesBar"><b>Speaker note</b><div id="notesText"></div></div>
+<div class="overview" id="overview"><div class="overview__grid" id="overviewGrid"></div></div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  let idx = 0;
+  const bar = document.getElementById('bar');
+  const counter = document.getElementById('counter');
+  const notesBar = document.getElementById('notesBar');
+  const notesText = document.getElementById('notesText');
+  const overview = document.getElementById('overview');
+  const overviewGrid = document.getElementById('overviewGrid');
+
+  if(location.hash){
+    const n = parseInt(location.hash.replace('#',''),10);
+    if(!isNaN(n)) idx = Math.max(0, Math.min(slides.length-1, n-1));
+  }
+  function render(){
+    slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+    bar.style.width = ((idx+1)/slides.length*100)+'%';
+    counter.textContent = (idx+1)+' / '+slides.length;
+    const note = slides[idx].querySelector('.notes');
+    notesText.innerHTML = note ? note.innerHTML : '(no notes for this slide)';
+    history.replaceState(null, '', '#'+(idx+1));
+  }
+  function go(n){ idx = Math.max(0, Math.min(slides.length-1, n)); render(); }
+
+  function scale(){
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const s = Math.min(vw/1280, vh/720) * 0.96;
+    document.querySelectorAll('.slide').forEach(sl=> sl.style.setProperty('--s', s));
+  }
+  window.addEventListener('resize', scale);
+  scale();
+
+  window.addEventListener('keydown', (e)=>{
+    if(overview.classList.contains('show')){
+      if(e.key==='Escape' || e.key==='o' || e.key==='O'){ overview.classList.remove('show'); }
+      return;
+    }
+    if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ go(idx+1); e.preventDefault(); }
+    else if(e.key==='ArrowLeft' || e.key==='PageUp'){ go(idx-1); e.preventDefault(); }
+    else if(e.key==='Home'){ go(0); }
+    else if(e.key==='End'){ go(slides.length-1); }
+    else if(e.key==='s' || e.key==='S'){ notesBar.classList.toggle('show'); }
+    else if(e.key==='f' || e.key==='F'){ document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+    else if(e.key==='o' || e.key==='O'){ buildOverview(); overview.classList.add('show'); }
+  });
+
+  // click / tap: right half forward, left half back
+  document.getElementById('deck').addEventListener('click', (e)=>{
+    if(overview.classList.contains('show')) return;
+    if(e.clientX > window.innerWidth/2) go(idx+1); else go(idx-1);
+  });
+
+  function buildOverview(){
+    overviewGrid.innerHTML = '';
+    slides.forEach((s,i)=>{
+      const d = document.createElement('div');
+      d.className = 'overview__item';
+      d.innerHTML = '<span>'+(i+1)+'</span>' + (s.dataset.title || '');
+      d.addEventListener('click', (ev)=>{ ev.stopPropagation(); go(i); overview.classList.remove('show'); });
+      overviewGrid.appendChild(d);
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

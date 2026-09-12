@@ -7,13 +7,17 @@
 --   Employees(employeeID, firstName, lastName, birthDate)
 --   Products (productID, category, price)
 --   Orders   (orderID, customerID, employeeID, productID, orderTotal, orderDate)
+--
+-- Run this whole script at once, or run each part separately from
+-- steps/00-create-database.sql through steps/09-alter-and-drop.sql
+-- (numbered to match the Parts in lecture-02-notes.md).
 -- ============================================================
 
 
 -- ------------------------------------------------------------
 -- STEP 0.  One wide, flat file.  42 rows, 13 columns.
 -- ------------------------------------------------------------
-CREATE TABLE sales_raw (
+CREATE TABLE IF NOT EXISTS sales_raw (
     orderID              INT,
     orderDate            DATE,
     customerFirstName    VARCHAR(50),
@@ -29,8 +33,13 @@ CREATE TABLE sales_raw (
     orderTotal           DECIMAL(10,2)
 );
 
+-- Safe to re-run: clear out any previous load first.
+TRUNCATE TABLE sales_raw;
+
 -- \copy runs on YOUR machine (psql).  COPY runs on the server.
-\copy sales_raw FROM 'sales_flat.csv' WITH (FORMAT csv, HEADER true);
+-- Path is relative to wherever you started psql -- run it from
+-- the lecture_2/ folder (the one containing this script).
+\copy sales_raw FROM 'data/sales_flat.csv' WITH (FORMAT csv, HEADER true);
 
 SELECT * FROM sales_raw ORDER BY orderDate, orderID LIMIT 10;
 
@@ -42,7 +51,7 @@ SELECT count(*)                         AS total_rows     FROM sales_raw;  -- 42
 SELECT count(DISTINCT customerLastName) AS real_customers FROM sales_raw;  -- 8
 SELECT count(DISTINCT productCategory)  AS real_products  FROM sales_raw;  -- 6
 
--- 42 rows, but 8 customers.  Anna's birth date is stored six times.
+-- 42 rows, but 8 customers.  Davit's birth date is stored eight times.
 
 SELECT customerFirstName, customerLastName, count(*) AS times_stored
 FROM sales_raw
@@ -73,7 +82,7 @@ ORDER BY times_stored DESC;
 -- ------------------------------------------------------------
 -- STEP 3.  CREATE the tables (DDL).
 -- ------------------------------------------------------------
-CREATE TABLE customers (
+CREATE TABLE IF NOT EXISTS customers (
     customerID   SERIAL PRIMARY KEY,
     firstName    VARCHAR(50) NOT NULL,
     lastName     VARCHAR(50) NOT NULL,
@@ -82,20 +91,20 @@ CREATE TABLE customers (
     anniversary  DATE
 );
 
-CREATE TABLE employees (
+CREATE TABLE IF NOT EXISTS employees (
     employeeID   SERIAL PRIMARY KEY,
     firstName    VARCHAR(50) NOT NULL,
     lastName     VARCHAR(50) NOT NULL,
     birthDate    DATE
 );
 
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
     productID    SERIAL PRIMARY KEY,
     category     VARCHAR(100) NOT NULL UNIQUE,
     price        DECIMAL(8,2) NOT NULL CHECK (price >= 0)
 );
 
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     orderID      INT PRIMARY KEY,
     customerID   INT NOT NULL REFERENCES customers(customerID),
     employeeID   INT NOT NULL REFERENCES employees(employeeID),
@@ -112,6 +121,9 @@ CREATE TABLE orders (
 -- ------------------------------------------------------------
 -- STEP 4.  Fill them (DML).  Parents first, children last.
 -- ------------------------------------------------------------
+-- Safe to re-run: clear out any previous run of this step first.
+TRUNCATE TABLE orders, customers, employees, products RESTART IDENTITY;
+
 INSERT INTO customers (firstName, lastName, birthDate, moneySpent, anniversary)
 SELECT DISTINCT customerFirstName, customerLastName, customerBirthDate,
                 customerMoneySpent, customerAnniversary
@@ -206,3 +218,72 @@ INSERT INTO products (category, price) VALUES ('Laptops', 999.00);
 -- ERROR: duplicate key value violates unique constraint
 
 -- A spreadsheet would have accepted all three, silently.
+
+
+-- ------------------------------------------------------------
+-- STEP 8.  ALTER and DROP -- evolving and retiring a schema.
+-- ------------------------------------------------------------
+
+-- ---- ALTER TABLE: add a column, the wrong way then the right way ----
+ALTER TABLE orders ADD COLUMN saleChannel VARCHAR(20);
+SELECT count(*) FROM orders WHERE saleChannel IS NULL;   -- 42
+
+ALTER TABLE orders ALTER COLUMN saleChannel SET NOT NULL;
+-- ERROR: column "salechannel" of relation "orders" contains null values
+
+UPDATE orders SET saleChannel = 'in_store' WHERE saleChannel IS NULL;
+ALTER TABLE orders ALTER COLUMN saleChannel SET NOT NULL;
+
+ALTER TABLE orders RENAME COLUMN saleChannel TO channel;
+ALTER TABLE customers ALTER COLUMN firstName TYPE VARCHAR(100);
+ALTER TABLE customers ALTER COLUMN firstName TYPE VARCHAR(50);  -- shrink back; fits since no name is > 50 chars
+
+ALTER TABLE orders ADD CONSTRAINT channel_known
+    CHECK (channel IN ('in_store', 'online'));
+
+UPDATE orders SET channel = 'carrier_pigeon'
+WHERE orderID = (SELECT orderID FROM orders LIMIT 1);
+-- ERROR: new row for relation "orders" violates check constraint "channel_known"
+
+ALTER TABLE orders DROP CONSTRAINT channel_known;
+ALTER TABLE orders DROP COLUMN channel;
+-- orders is back to exactly the 6 columns from STEP 3.
+
+
+-- ---- DELETE vs TRUNCATE vs DROP TABLE: all three respect foreign keys ----
+DELETE FROM products WHERE productID = 1;
+-- ERROR: update or delete on table "products" violates foreign key
+--        constraint "orders_productid_fkey" on table "orders"
+
+TRUNCATE products;
+-- ERROR: cannot truncate a table referenced in a foreign key constraint
+-- HINT:  Truncate table "orders" at the same time, or use TRUNCATE ... CASCADE.
+
+DROP TABLE products;
+-- ERROR: cannot drop table products because other objects depend on it
+-- HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+DROP TABLE IF EXISTS not_a_real_table;
+-- NOTICE: table "not_a_real_table" does not exist, skipping
+
+
+-- ---- What CASCADE actually does -- try it on a disposable pair,
+-- not the real schema. It drops the dependent CONSTRAINT, not the
+-- dependent table or its rows. ----
+CREATE TABLE scratch_categories (name VARCHAR(50) PRIMARY KEY);
+CREATE TABLE scratch_items (
+    id  SERIAL PRIMARY KEY,
+    cat VARCHAR(50) REFERENCES scratch_categories(name)
+);
+
+DROP TABLE scratch_categories CASCADE;
+-- NOTICE: drop cascades to constraint scratch_items_cat_fkey on table scratch_items
+
+\d scratch_items
+DROP TABLE scratch_items;
+
+-- Confirm the real schema ends up unchanged (column added/removed and
+-- firstName's width widened/shrunk both net to zero):
+SELECT 'products' AS t, count(*) FROM products
+UNION ALL SELECT 'orders', count(*) FROM orders;
+-- Expected: 6 / 42 -- unchanged since STEP 4.

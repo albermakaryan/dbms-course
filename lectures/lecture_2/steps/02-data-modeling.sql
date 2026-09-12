@@ -1,0 +1,15 @@
+-- ============================================================
+-- Lecture 2 — Part 2: Data modeling (no SQL to run)
+-- ============================================================
+--
+-- This part is whiteboard / discussion — work through it on the
+-- projector using lecture-02-notes.md, Part 2:
+--
+--   - entities, attributes, relationships
+--   - cardinality + crow's foot notation
+--   - the ER diagram for customers / employees / products / orders
+--   - natural key vs. surrogate key -- why customerID exists
+--   - functional dependencies, and 1NF / 2NF / 3NF applied to
+--     sales_raw itself (the redundancy from Part 1, made precise)
+--
+-- Part 4 (04-ddl.sql) turns this diagram into real SQL.
