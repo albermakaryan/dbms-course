@@ -2,3 +2,10 @@ node_modules/
 dist/
 site/
 .DS_Store
+
+# Lecture 4: steps held back from this release
+lectures/lecture_4/steps/13-document-join.sql
+lectures/lecture_4/steps/14-lossless.sql
+
+# Personal planning notes
+TODO.md

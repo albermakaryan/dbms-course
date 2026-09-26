@@ -1,0 +1,12 @@
+erDiagram
+    CUSTOMERS ||--o{ ORDERS : places
+    CUSTOMERS {
+        int customerID PK
+        text firstName
+        text city
+    }
+    ORDERS {
+        int orderID PK
+        int customerID FK
+        decimal orderTotal
+    }

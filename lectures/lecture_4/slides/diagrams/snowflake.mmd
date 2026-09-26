@@ -1,0 +1,32 @@
+erDiagram
+    DIM_CATEGORY ||--o{ DIM_PRODUCT  : groups
+    DIM_PRODUCT  ||--o{ FACT_SALES   : "what"
+    DIM_BRANCH   ||--o{ DIM_EMPLOYEE : employs
+    DIM_EMPLOYEE ||--o{ FACT_SALES   : "who sold"
+    DIM_DATE     ||--o{ FACT_SALES   : "when"
+    DIM_CUSTOMER ||--o{ FACT_SALES   : "who bought"
+    FACT_SALES {
+        int orderID PK
+        date dateKey FK
+        int productKey FK
+        int employeeKey FK
+        decimal revenue
+    }
+    DIM_PRODUCT {
+        int productKey PK
+        text productName
+        int categoryKey FK
+    }
+    DIM_CATEGORY {
+        int categoryKey PK
+        text category
+    }
+    DIM_EMPLOYEE {
+        int employeeKey PK
+        text employeeName
+        int branchKey FK
+    }
+    DIM_BRANCH {
+        int branchKey PK
+        text branch
+    }

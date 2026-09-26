@@ -1,0 +1,21 @@
+erDiagram
+    ORDERS   ||--|{ ORDER_ITEMS : contains
+    PRODUCTS ||--o{ ORDER_ITEMS : "appears in"
+    ORDERS {
+        int orderID PK
+        int customerID FK
+        date orderDate
+        text status
+    }
+    ORDER_ITEMS {
+        int orderID PK, FK
+        int productID PK, FK
+        int quantity
+        decimal unitPrice
+        int discountPct
+    }
+    PRODUCTS {
+        int productID PK
+        text productName
+        decimal price
+    }

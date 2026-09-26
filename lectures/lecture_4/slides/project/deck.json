@@ -1,0 +1,92 @@
+{
+  "v": 4,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-09-24T18:07:17Z"
+  },
+  "title": "Lecture 4 — Putting the Tables Back Together",
+  "order": [
+    "cover",
+    "left-off",
+    "dm-def",
+    "dm-levels",
+    "dm-hier",
+    "dm-network",
+    "dm-relational",
+    "dm-document",
+    "dm-kv",
+    "dm-graph",
+    "dm-compare",
+    "dm-why",
+    "sc-oltp",
+    "sc-normalized",
+    "sc-flat",
+    "sc-star",
+    "sc-snowflake",
+    "sc-rules",
+    "sc-items",
+    "j-ids",
+    "j-pairs",
+    "j-names",
+    "j-natural",
+    "j-order",
+    "o-inner-left",
+    "o-anti",
+    "o-count",
+    "o-where-on",
+    "o-types",
+    "m-self",
+    "m-wrongkey",
+    "m-fanout",
+    "m-nonequi",
+    "st-build",
+    "st-etl",
+    "d-drill",
+    "d-checks"
+  ],
+  "sections": {
+    "open": {
+      "description": "Where Lecture 3 left us",
+      "start": "cover"
+    },
+    "models": {
+      "description": "Part 1: data models — levels and kinds",
+      "start": "dm-def"
+    },
+    "schemas": {
+      "description": "Part 2: schema types — OLTP vs OLAP; normalized, flat, star, snowflake",
+      "start": "sc-oltp"
+    },
+    "join": {
+      "description": "Part 3: JOIN — every combination, then keep the matching pairs",
+      "start": "j-ids"
+    },
+    "outer": {
+      "description": "Part 4: outer joins — keeping the rows that found no partner",
+      "start": "o-inner-left"
+    },
+    "more": {
+      "description": "Part 5: self-joins, joining on the wrong column, fan-out, ranges",
+      "start": "m-self"
+    },
+    "star": {
+      "description": "Part 6: building a star schema from the normalized tables",
+      "start": "st-build"
+    },
+    "drill": {
+      "description": "Part 7: verification drill and the four checks",
+      "start": "d-drill"
+    }
+  },
+  "faces": {
+    "ibm-plex-sans": {
+      "family": "IBM Plex Sans",
+      "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+    },
+    "jetbrains-mono": {
+      "family": "JetBrains Mono",
+      "href": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
+    }
+  },
+  "designSystems": []
+}

@@ -1,0 +1,13 @@
+flowchart LR
+    subgraph DOC["order 1001 · 2024-01-01 · total 211.65"]
+        direction LR
+        subgraph PR["product"]
+            p1["name: AirPods Pro<br/>brand: Apple · price: 249.00"]
+        end
+        subgraph PR0["customer"]
+            c1["name: Davit Petrosyan<br/>city: Gyumri"]
+        end
+        s1["soldBy: Ani Harutyunyan"]
+    end
+    classDef hot fill:#2A2415,stroke:#F2CC60,color:#F2CC60
+    class c1 hot

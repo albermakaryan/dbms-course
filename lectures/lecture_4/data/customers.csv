@@ -1,0 +1,31 @@
+customerID,firstName,lastName,email,phone,city,birthDate,signupDate,anniversary,moneySpent
+1,Anna,Sargsyan,anna.sargsyan@gmail.com,+374 98 706446,Yerevan,1991-04-12,2021-04-24,2022-06-01,5988.47
+2,Davit,Petrosyan,davit.petrosyan@mail.ru,+374 94 659080,Gyumri,1988-11-23,2020-11-27,2021-09-14,8230.04
+3,Mariam,Hakobyan,mariam.hakobyan@gmail.com,+374 96 863110,Yerevan,1995-02-07,2023-04-10,2023-03-20,3685.98
+4,Tigran,Grigoryan,tigran.grigoryan@gmail.com,+374 91 866886,Gyumri,1983-07-30,2020-12-25,2020-11-05,5291.36
+5,Lusine,Avetisyan,lusine.avetisyan@outlook.com,,Abovyan,1999-01-18,2020-09-07,2023-08-11,2588.50
+6,Narek,Manukyan,narek.manukyan@outlook.com,+374 99 466419,Gyumri,1992-09-03,2022-08-04,2022-02-28,6146.85
+7,Sona,Karapetyan,sona.karapetyan@gmail.com,+374 94 509265,Yerevan,1986-05-25,2021-06-26,2021-04-17,5530.54
+8,Aram,Vardanyan,aram.vardanyan@gmail.com,+374 94 695264,Yerevan,1997-12-09,2020-07-08,2024-01-30,13544.72
+9,Hayk,Melikyan,hayk.melikyan@mail.ru,+374 99 120364,Vanadzor,1993-03-30,2021-09-11,,1815.59
+10,Lilit,Hovhannisyan,lilit.hovhannisyan@mail.ru,+374 98 541502,Abovyan,1990-06-14,2023-02-11,2019-05-05,8978.29
+11,Anna,Sargsyan,anna.sargsyan78@mail.ru,+374 93 347548,Yerevan,1978-10-02,2022-06-05,,2100.34
+12,Armen,Gevorgyan,armen.gevorgyan@gmail.com,+374 99 758608,Gyumri,1985-12-01,2020-05-13,2015-09-09,9172.79
+13,Gayane,Mnatsakanyan,gayane.mnatsakanyan@gmail.com,,Gyumri,1996-04-22,2022-03-22,,3728.49
+14,Vahan,Torosyan,vahan.torosyan@yahoo.com,+374 94 316961,Yerevan,1989-08-08,2023-11-03,2018-10-10,8575.72
+15,Arpine,Simonyan,arpine.simonyan@yahoo.com,+374 91 257977,Yerevan,2000-02-29,2022-12-08,,2478.95
+16,Karen,Khachatryan,karen.khachatryan@gmail.com,+374 99 398047,Gyumri,1982-01-15,2020-12-15,2012-06-30,7462.79
+17,Nane,Galstyan,nane.galstyan@gmail.com,+374 95 796115,Yerevan,1998-11-11,2022-04-27,,2997.50
+18,Ruben,Asatryan,ruben.asatryan@gmail.com,+374 93 691962,Yerevan,1975-03-03,2021-09-04,2005-08-20,5885.18
+19,Tatev,Martirosyan,tatev.martirosyan@yahoo.com,+374 99 507475,Yerevan,1994-07-19,2020-09-28,2020-02-14,4005.10
+20,Artur,Baghdasaryan,artur.baghdasaryan@gmail.com,+374 98 938627,Yerevan,1987-09-27,2019-10-22,2016-12-24,10451.07
+21,Meline,Poghosyan,meline.poghosyan@outlook.com,,Yerevan,1992-05-05,2019-02-08,,1145.20
+22,Suren,Hayrapetyan,suren.hayrapetyan@gmail.com,+374 99 320453,Yerevan,1980-10-30,2023-02-17,2010-04-01,3526.16
+23,Ani,Stepanyan,ani.stepanyan@gmail.com,+374 99 867390,Yerevan,1997-01-09,2020-03-03,2023-11-11,1937.31
+24,Levon,Arakelyan,levon.arakelyan@gmail.com,+374 96 688960,Yerevan,1984-06-21,2023-11-01,2014-07-07,0.00
+25,Hasmik,Zakaryan,hasmik.zakaryan@mail.ru,+374 96 832237,Yerevan,1991-02-14,2021-01-04,2021-06-19,5710.74
+26,Samvel,Nazaryan,samvel.nazaryan@gmail.com,+374 91 766211,Gyumri,1979-12-12,2023-11-20,2006-03-15,3463.20
+27,Diana,Aleksanyan,diana.aleksanyan@mail.ru,,Yerevan,1999-09-09,2020-08-06,,2327.00
+28,Gevorg,Kocharyan,gevorg.kocharyan@gmail.com,+374 95 765112,Vanadzor,1986-03-17,2022-12-26,2017-05-27,6999.68
+29,Astghik,Danielyan,astghik.danielyan@gmail.com,+374 99 570530,Yerevan,1995-08-02,2022-10-23,2022-09-03,0.00
+30,Mher,Sargsyan,mher.sargsyan@gmail.com,+374 94 517228,Yerevan,1983-04-04,2020-03-12,2013-10-18,2167.56

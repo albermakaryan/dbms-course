@@ -1,0 +1,32 @@
+erDiagram
+    CUSTOMERS ||--o{ ORDERS : places
+    PRODUCTS  ||--o{ ORDERS : "sold in"
+    EMPLOYEES |o--o{ ORDERS : "handles (NULL = online)"
+    EMPLOYEES |o--o{ EMPLOYEES : manages
+    CUSTOMERS {
+        int customerID PK
+        text firstName
+        text lastName
+        text city
+        decimal moneySpent
+    }
+    PRODUCTS {
+        int productID PK
+        text productName
+        text category
+        decimal price
+    }
+    EMPLOYEES {
+        int employeeID PK
+        text firstName
+        text branch
+        int managerID FK
+    }
+    ORDERS {
+        int orderID PK
+        int customerID FK
+        int productID FK
+        int employeeID FK
+        decimal orderTotal
+        text status
+    }

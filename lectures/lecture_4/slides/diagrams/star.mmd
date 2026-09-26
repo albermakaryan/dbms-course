@@ -1,0 +1,38 @@
+erDiagram
+    DIM_DATE     ||--o{ FACT_SALES : "when"
+    DIM_CUSTOMER ||--o{ FACT_SALES : "who bought"
+    DIM_PRODUCT  ||--o{ FACT_SALES : "what"
+    DIM_EMPLOYEE ||--o{ FACT_SALES : "who sold"
+    FACT_SALES {
+        int orderID PK
+        date dateKey FK
+        int customerKey FK
+        int productKey FK
+        int employeeKey FK
+        int quantity
+        decimal revenue
+        decimal cost
+    }
+    DIM_DATE {
+        date dateKey PK
+        int quarter
+        text monthName
+        text dayName
+    }
+    DIM_PRODUCT {
+        int productKey PK
+        text productName
+        text brand
+        text category
+    }
+    DIM_EMPLOYEE {
+        int employeeKey PK
+        text employeeName
+        text branch
+        text managerName
+    }
+    DIM_CUSTOMER {
+        int customerKey PK
+        text customerName
+        text city
+    }

@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Putting the Tables Back Together — Lecture 4</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{
+  --bg:#ffffff; --bg-subtle:#F3F6F9; --bg-grid:#EEF3F8;
+  --ink:#141517; --ink-soft:#4B5563; --ink-faint:#8A94A3; --rule:#DCE3EA;
+  --blue:#3D6D9E; --blue-mid:#5B8FC4; --blue-light:#BCD7E9; --blue-dark:#1F3864;
+  --slate:#687F91; --slate-dark:#4F626F; --slate-light:#DCE4EA;
+  --green:#2E7D4F; --green-dark:#1F5E3B; --green-tint:#E7F4EC;
+  --red:#D93025; --red-tint:#FCEAE8;
+  --code-bg:#202124; --code-fg:#D9D9D9; --code-comment:#5FAE7E; --code-keyword:#6FA8DC;
+  --code-type:#7FB9E8; --code-string:#E8A87C; --code-number:#9CCC65; --code-fn:#DCC98A;
+  --font-sans: Arial, Helvetica, "Helvetica Neue", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Roboto Mono", "Courier New", monospace;
+  --slide-w: 1280px; --slide-h: 720px;
+}
+*{box-sizing:border-box;}
+html,body{ margin:0; padding:0; height:100%; background:#20242b; font-family:var(--font-sans); color:var(--ink); overflow:hidden; }
+.deck{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+.slide{ position:absolute; width:var(--slide-w); height:var(--slide-h); background:var(--bg); display:none; flex-direction:column; padding:56px 72px 48px; box-shadow:0 30px 80px rgba(0,0,0,.35); transform:scale(var(--s,1)); transform-origin:center center; }
+.slide.active{ display:flex; }
+.slide .notes{ display:none; }
+.viewport-fit{ position:relative; width:var(--slide-w); height:var(--slide-h); }
+.chrome{ position:fixed; left:0; right:0; bottom:0; height:5px; background:rgba(255,255,255,.08); z-index:50;}
+.chrome__bar{ height:100%; background:linear-gradient(90deg,var(--blue),var(--green)); width:0%; transition:width .25s ease;}
+.counter{ position:fixed; right:18px; bottom:14px; z-index:50; font:600 13px/1 var(--font-sans); color:rgba(255,255,255,.55); letter-spacing:.02em; }
+.deckname{ position:fixed; left:18px; bottom:14px; z-index:50; font:600 12px/1 var(--font-sans); color:rgba(255,255,255,.35); letter-spacing:.04em; text-transform:uppercase; }
+.notes-bar{ position:fixed; left:0; right:0; bottom:0; z-index:60; background:#12151a; color:#E7ECF2; border-top:3px solid var(--green); padding:22px 48px; font:16px/1.5 var(--font-sans); max-height:32vh; overflow:auto; transform:translateY(100%); transition:transform .2s ease; }
+.notes-bar.show{ transform:translateY(0); }
+.notes-bar b{ color:var(--green); text-transform:uppercase; font-size:12px; letter-spacing:.08em; display:block; margin-bottom:8px;}
+.overview{ position:fixed; inset:0; background:#181b20; z-index:100; display:none; padding:40px; overflow:auto; }
+.overview.show{ display:block; }
+.overview__grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:14px; max-width:1500px; margin:0 auto; }
+.overview__item{ background:#fff; border-radius:6px; aspect-ratio:16/9; position:relative; cursor:pointer; overflow:hidden; border:2px solid transparent; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; font-size:10px; color:var(--ink-soft); font-weight:600; }
+.overview__item:hover{ border-color:var(--green); }
+.overview__item span{ position:absolute; top:4px; left:6px; font-size:9px; color:var(--ink-faint); font-weight:700;}
+.kicker{ font:700 13px/1 var(--font-sans); letter-spacing:.12em; text-transform:uppercase; color:var(--blue); margin:0 0 14px; }
+h1.title{ font:700 40px/1.15 var(--font-sans); color:var(--ink); margin:0 0 14px; letter-spacing:-.01em; }
+p.lede{ font:400 20px/1.45 var(--font-sans); color:var(--ink-soft); margin:0 0 28px; max-width:980px; }
+.body-area{ flex:1; min-height:0; display:flex; flex-direction:column; }
+.slide--title{ align-items:center; justify-content:center; text-align:center; }
+.slide--title .eyebrow{ font:600 16px var(--font-sans); color:var(--blue); letter-spacing:.04em; margin-bottom:26px;}
+.slide--title h1{ font:700 52px/1.2 var(--font-sans); margin:0 0 26px; max-width:920px; }
+.slide--title .sub{ font:italic 24px var(--font-sans); color:var(--ink-soft); margin:0 0 34px;}
+.slide--title .meta{ font:19px var(--font-sans); color:var(--ink-faint); }
+.slide--section{ justify-content:center; position:relative; overflow:hidden; background:linear-gradient(135deg,#1F3864 0%, #2c5183 55%, var(--blue) 100%); color:#fff; }
+.slide--section .num{ font:800 220px/1 var(--font-mono); position:absolute; right:20px; top:-40px; color:rgba(255,255,255,.10); letter-spacing:-.05em; }
+.slide--section .kicker{ color:#BFD6EC; }
+.slide--section h1{ color:#fff; font-size:52px; max-width:900px; }
+.slide--section p.lede{ color:#D9E6F2; font-size:22px; max-width:820px; }
+.slide--content h1.title{ font-size:36px; }
+.cols{ display:flex; gap:40px; flex:1; min-height:0; }
+.col{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.col--narrow{ flex:0 0 340px; }
+.col--wide{ flex:1.4; }
+ul.points{ margin:0; padding:0; list-style:none; }
+ul.points li{ position:relative; padding-left:26px; margin-bottom:14px; font:19px/1.5 var(--font-sans); color:var(--ink); }
+ul.points li::before{ content:""; position:absolute; left:0; top:9px; width:9px; height:9px; border-radius:50%; background:var(--blue); }
+ul.points.tight li{ margin-bottom:8px; font-size:17px; }
+ul.points li b{ color:var(--blue-dark); }
+ul.points li .neg{ color:var(--red); font-weight:700; }
+.defs{ display:flex; flex-direction:column; gap:18px; }
+.def{ display:flex; gap:18px; align-items:baseline; }
+.def__term{ flex:0 0 190px; font:700 20px var(--font-sans); color:var(--blue-dark); }
+.def__body{ font:19px/1.5 var(--font-sans); color:var(--ink); }
+.panel{ border:1px solid var(--rule); border-radius:8px; overflow:hidden; display:flex; flex-direction:column; background:#fff;}
+.panel__head{ background:var(--slate); color:#fff; font:700 17px var(--font-sans); padding:12px 18px; }
+.panel__head.blue{ background:var(--blue-dark); }
+.panel__body{ padding:16px 18px; background:var(--bg-subtle); flex:1; }
+.panel__body ul.points li::before{ background:var(--slate); }
+.callout{ border-radius:8px; padding:14px 18px; font:16px/1.45 var(--font-sans); margin-top:auto; }
+.callout--green{ background:var(--green); color:#fff; }
+.callout--green b{ text-transform:uppercase; font-size:12px; letter-spacing:.06em; display:block; margin-bottom:3px; opacity:.9;}
+.callout--red{ background:var(--red); color:#fff; }
+.callout--red b{ text-transform:uppercase; font-size:12px; letter-spacing:.06em; display:block; margin-bottom:3px; opacity:.9;}
+.boxrow{ display:flex; gap:28px; flex:1; align-items:stretch; }
+.box{ flex:1; border:2px solid var(--slate); border-radius:8px; overflow:hidden; display:flex; flex-direction:column;}
+.box__head{ background:var(--slate); color:#fff; font:700 18px var(--font-sans); padding:10px 16px;}
+.box__body{ padding:14px 16px; font:16px/1.6 var(--font-mono); color:var(--ink); background:#fff; flex:1;}
+.box--accent .box__head{ background:var(--blue-dark); }
+.slide--statement{ align-items:center; justify-content:center; text-align:center; }
+.slide--statement .stat{ font:800 108px/1 var(--font-sans); color:var(--blue-dark); margin-bottom:8px; }
+.slide--statement .stat-label{ font:22px var(--font-sans); color:var(--ink-soft); }
+.slide--statement .big-line{ font:700 42px/1.35 var(--font-sans); color:var(--blue-dark); max-width:980px; }
+.slide--statement .big-line em{ color:var(--red); font-style:normal; }
+.slide--question{ justify-content:center; background:var(--bg-subtle); }
+.slide--question .qmark{ font:800 90px var(--font-sans); color:var(--blue-light); line-height:1; margin-bottom:10px;}
+.slide--question h1{ font:700 38px/1.35 var(--font-sans); color:var(--blue-dark); max-width:1000px; }
+.slide--question .hint{ font:italic 19px var(--font-sans); color:var(--ink-faint); margin-top:22px; }
+table.cmp{ border-collapse:collapse; width:100%; }
+table.cmp th, table.cmp td{ border:1px solid var(--rule); padding:14px 18px; text-align:left; font:18px/1.4 var(--font-sans); }
+table.cmp thead th{ background:var(--slate); color:#fff; font-weight:700; }
+table.cmp tbody th{ background:var(--slate-light); font-weight:700; color:var(--ink); width:230px;}
+table.cmp tbody tr:nth-child(even) td{ background:var(--bg-subtle); }
+table.cmp td.yes{ color:var(--green-dark); font-weight:700; }
+table.cmp td.no{ color:var(--red); font-weight:700; }
+table.cmp .highlight-col{ background:var(--green-tint) !important; color:var(--green-dark); font-weight:600;}
+table.cmp td.bad{ background:var(--red-tint) !important; color:var(--red); font-weight:700; }
+table.cmp td.key{ font-weight:700; color:var(--blue-dark); }
+table.cmp.compact th, table.cmp.compact td{ padding:7px 12px; font-size:15px; line-height:1.3; }
+table.cmp.compact thead th{ font-size:14px; }
+.panel .tblcap{ font:700 13px var(--font-sans); color:var(--ink-soft); letter-spacing:.02em; margin:8px 0 5px; }
+table.cmp.tight th, table.cmp.tight td{ padding:4px 12px; }
+.panel .tblcap:first-child{ margin-top:0; }
+table.vocab{ border-collapse:collapse; width:100%; }
+table.vocab th, table.vocab td{ border-bottom:1px solid var(--rule); padding:13px 16px; text-align:left; font:18px/1.4 var(--font-sans); vertical-align:top;}
+table.vocab thead th{ background:var(--blue-dark); color:#fff; font-weight:700; border-bottom:none;}
+table.vocab td.term{ font:700 17px var(--font-mono); color:var(--blue-dark); white-space:nowrap; }
+.code{ background:var(--code-bg); border-radius:14px; padding:24px 28px; font:19px/1.65 var(--font-mono); color:var(--code-fg); overflow:auto; white-space:pre; }
+.code .com{ color:var(--code-comment); }
+.code .kw{ color:var(--code-keyword); font-weight:700;}
+.code .ty{ color:var(--code-type); }
+.code .str{ color:var(--code-string); }
+.code .num{ color:var(--code-number); }
+.code .fn{ color:var(--code-fn); }
+.code .er{ color:#F28B82; }
+.legend{ display:flex; gap:36px; flex-wrap:wrap; }
+.legend__item{ display:flex; align-items:center; gap:14px; }
+.legend__sym{ font:800 26px var(--font-mono); color:var(--blue-dark); min-width:70px; }
+.legend__label{ font:18px var(--font-sans); color:var(--ink); }
+.erwrap{ flex:1; display:flex; align-items:center; justify-content:center; }
+footer.tag{ margin-top:auto; padding-top:14px; font:13px var(--font-sans); color:var(--ink-faint); border-top:1px solid var(--rule); }
+.chiprow{ display:flex; gap:14px; flex-wrap:wrap; margin-top:18px; }
+.chip{ background:var(--slate); color:#fff; font:700 16px var(--font-mono); padding:10px 20px; border-radius:6px; }
+.cardviz{ display:flex; flex-direction:column; gap:20px; flex:1; justify-content:center; }
+.cardviz__row{ display:flex; align-items:center; gap:0; }
+.cv-box{ background:#fff; border:2px solid var(--slate); border-radius:6px; padding:12px 22px; font:700 19px var(--font-sans); color:var(--ink); min-width:170px; text-align:center; }
+.cv-box.accent{ border-color:var(--blue-dark); background:var(--blue-dark); color:#fff; }
+.cv-conn{ flex:1; text-align:center; font:700 21px var(--font-mono); color:var(--blue); letter-spacing:.03em; }
+.cv-label{ flex:0 0 220px; font:16px var(--font-sans); color:var(--ink-soft); padding-left:24px; }
+.headstat{ font:800 64px/1 var(--font-sans); color:var(--blue-dark); margin-bottom:6px; }
+.headstat-label{ font:18px var(--font-sans); color:var(--ink-soft); margin-bottom:22px; }
+@media print{
+  html,body{ overflow:visible; background:#fff; }
+  .chrome,.counter,.deckname,.notes-bar,.overview{ display:none !important; }
+  .deck{ position:static; display:block; }
+  .slide{ display:flex !important; position:static; box-shadow:none; width:100%; height:100vh; page-break-after:always; transform:none !important; }
+  .slide .notes{ display:block !important; margin-top:14px; padding-top:10px; border-top:1px dashed #999; font:12px var(--font-sans); color:#555; }
+}
+
+/* ---- Lecture 4 additions (same palette, same fonts) ---- */
+.diagram{ flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+.vennrow{ display:flex; gap:36px; align-items:center; }
+.sidebox{ flex:1; min-width:0; }
+.result{ font:700 15px var(--font-sans); color:var(--ink-soft); margin:10px 0 4px; letter-spacing:.02em; }
+.bignum{ font:800 44px/1 var(--font-sans); color:var(--blue-dark); }
+.bignum.bad{ color:var(--red); }
+.bignum.good{ color:var(--green-dark); }
+.bignum-label{ font:16px/1.4 var(--font-sans); color:var(--ink-soft); margin-top:6px; }
+.err{ background:var(--code-bg); border-radius:10px; padding:14px 20px; font:16px/1.55 var(--font-mono); color:#F28B82; white-space:pre; margin-top:12px; }
+.quote{ font:italic 22px/1.45 var(--font-sans); color:var(--ink-soft); max-width:900px; margin-top:18px; }
+ol.refs{ margin:0; padding-left:22px; columns:2; column-gap:40px; }
+ol.refs li{ font:12.5px/1.4 var(--font-sans); color:var(--ink-soft); margin-bottom:6px; break-inside:avoid; }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+  <div class="viewport-fit" id="viewportFit">
+
+        <section class="slide slide--title active" data-title="Title">
+      <div class="eyebrow">Introduction to Databases &amp; SQL · Lecture 4</div>
+      <h1>Putting the Tables Back Together</h1>
+      <div class="sub">YSU, Data Science for Business</div>
+      <div class="meta">Data models · dimensional modeling · star &amp; snowflake · JOINs</div>
+      <div class="notes"><b>Say</b> Last time we took one table apart question by question. Today we put four tables back together, and build a second, analytical schema on top. Setup for the room: createdb lecture04, then \i steps/00-setup.sql from the lecture_4 folder; expect 600 / 30 / 8 / 37 / 600.</div>
+    </section>
+    <section class="slide slide--content" data-title="Agenda">
+      <div class="kicker">Today's Arc</div>
+      <h1 class="title">Four parts, one running example</h1>
+      <p class="lede">Same shop, same data as Lecture 3: 600 orders, 30 customers, 8 employees, 37 products.</p>
+      <div class="body-area">
+<ul class="points" style="columns:2; column-gap:48px;">
+          <li><b>1</b> — Three levels of a data model</li>
+          <li><b>2</b> — Dimensional modeling: facts, dimensions, grain</li>
+          <li><b>3</b> — Star vs. snowflake schema</li>
+          <li><b>4</b> — JOINs, built from one idea</li>
+        </ul>
+        <div class="callout callout--green" style="margin-top:30px; max-width:900px;"><b>Most of today is Part 4</b>Every join type falls out of a single sentence — and every trap in it returns a normal-looking table, with no error.</div>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, scope line (600 / 30 / 8 / 37 / 600)</footer>
+      <div class="notes"><b>Say</b> Part 4 is the long one. Parts 1–3 give the vocabulary; Part 4 is the skill.</div>
+    </section>
+    <section class="slide slide--content" data-title="Recap: where we left off">
+      <div class="kicker">Where We Left Off</div>
+      <h1 class="title">We split one wide table into four</h1>
+      
+      <div class="body-area">
+<div class="chiprow" style="margin-top:0;">
+          <div class="chip">customers</div><div class="chip">employees</div><div class="chip">products</div><div class="chip">orders</div>
+        </div>
+        <div class="defs" style="margin-top:28px;">
+          <div class="def"><div class="def__term">Lecture 2</div><div class="def__body">Split the flat sales file into four tables, one fact in one place.</div></div>
+          <div class="def"><div class="def__term">Lecture 3</div><div class="def__body">Asked questions of one table at a time.</div></div>
+          <div class="def"><div class="def__term">Today</div><div class="def__body">Put the four back together with JOIN — and build a second, analytical schema on top of them.</div></div>
+        </div>
+      </div>
+      <footer class="tag">Source: Lecture 2 and Lecture 3 notes</footer>
+      <div class="notes"><b>Say</b> Everything today is either putting tables together (JOIN) or deciding what shape the tables should have in the first place (models and schemas).</div>
+    </section>
+    <section class="slide slide--section" data-title="Part 1 — Three levels of a data model">
+      <div class="num">01</div>
+      <div class="kicker">Part 1</div>
+      <h1 class="title">Three levels of a data model</h1>
+      <p class="lede">Every table you design goes through three translations, whether you name them or not.</p>
+      <div class="notes"><b>Say</b> Name the three levels today; you have already used all three.</div>
+    </section>
+    <section class="slide slide--content" data-title="Conceptual, logical, physical">
+      <div class="kicker">Part 1 &middot; Data Models</div>
+      <h1 class="title">Conceptual → logical → physical</h1>
+      
+      <div class="body-area">
+<div class="boxrow" style="flex:0 0 auto; align-items:stretch;">
+          <div class="box"><div class="box__head">Conceptual</div><div class="box__body" style="font-family:var(--font-sans);">
+            <b>Entities and relationships.</b> No tables yet.<br><br>
+            <span style="color:var(--ink-soft);">"A customer places orders. An order is for one product. An employee may serve an order — or nobody does, if it's online."</span></div></div>
+          <div class="box"><div class="box__head">Logical</div><div class="box__body" style="font-family:var(--font-sans);">
+            <b>Tables, columns, keys, constraints.</b> Still DBMS-agnostic.<br><br>
+            <span style="font-family:var(--font-mono); font-size:14px;">orders.customerID</span> — required foreign key<br>
+            <span style="font-family:var(--font-mono); font-size:14px;">orders.employeeID</span> — optional</div></div>
+          <div class="box box--accent"><div class="box__head">Physical</div><div class="box__body" style="font-family:var(--font-sans);">
+            <b>How one engine stores it.</b><br><br>
+            <span style="font-family:var(--font-mono); font-size:14px;">\d orders</span> shows it: exact types (<span style="font-family:var(--font-mono); font-size:14px;">DECIMAL(10,2)</span>), exact constraints, defaults — and the index PostgreSQL built for the primary key.</div></div>
+        </div>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 1; Wikipedia, “Data model” (three kinds, citing ANSI 1975); PostgreSQL 16 docs, CREATE TABLE</footer>
+      <div class="notes"><b>Say</b> The conceptual level is Lecture 2's ER diagram. Run \d orders live: the Indexes line shows orders_pkey, a unique btree index PostgreSQL creates automatically for every primary key (PostgreSQL docs, CREATE TABLE). Nobody asked for it — that's what 'physical' means.</div>
+    </section>
+    <section class="slide slide--content" data-title="A mistake costs more the further right">
+      <div class="kicker">Part 1 &middot; Data Models</div>
+      <h1 class="title">The further right, the more a change costs</h1>
+      
+      <div class="body-area">
+<div class="diagram"><svg viewBox="0 0 1136 260" width="1136" height="260"><rect x="20" y="170" width="80" height="40" fill="#2E7D4F" fill-opacity=".85"/><text x="120" y="120" font-family="Arial" font-weight="700" font-size="20" fill="#1F3864">Conceptual</text><text x="120" y="146" font-family="Arial" font-size="14" fill="#4B5563">erase a box, redraw an arrow</text><path d="M 350,200 H 390" stroke="#8A94A3" stroke-width="2"/><path d="M 382,194 L 390,200 L 382,206" stroke="#8A94A3" stroke-width="2" fill="none"/><rect x="400" y="100" width="80" height="110" fill="#3D6D9E" fill-opacity=".85"/><text x="500" y="120" font-family="Arial" font-weight="700" font-size="20" fill="#1F3864">Logical</text><text x="500" y="146" font-family="Arial" font-size="14" fill="#4B5563">rework keys and constraints on paper</text><path d="M 730,200 H 770" stroke="#8A94A3" stroke-width="2"/><path d="M 762,194 L 770,200 L 762,206" stroke="#8A94A3" stroke-width="2" fill="none"/><rect x="780" y="20" width="80" height="190" fill="#D93025" fill-opacity=".85"/><text x="880" y="120" font-family="Arial" font-weight="700" font-size="20" fill="#1F3864">Physical</text><text x="880" y="146" font-family="Arial" font-size="14" fill="#4B5563">ALTER TABLE on live data</text><text x="880" y="166" font-family="Arial" font-size="13" fill="#8A94A3">(Lecture 2, Part 9)</text><line x1="20" y1="210" x2="1116" y2="210" stroke="#DCE3EA" stroke-width="1.5"/><text x="20" y="240" font-family="Arial" font-size="13" fill="#8A94A3">bar height = the cost of changing your mind at that level</text></svg></div><div class="callout callout--red" style="margin-top:6px; max-width:1000px;"><b>Physical mistakes</b>A VARCHAR(50) that turns out too short, or a SERIAL that should have been BIGINT, means an ALTER TABLE on live data — or worse.</div>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 1; Lecture 2 notes, Part 9 (ALTER TABLE)</footer>
+      <div class="notes"><b>Say</b> This is why we draw before we type. On paper, a wrong arrow costs an eraser. In production, the same wrong decision costs an ALTER TABLE with real rows in the way (Lecture 2, Part 9). The bar heights show the direction, not measured costs.</div>
+    </section>
+    <section class="slide slide--section" data-title="Part 2 — Dimensional modeling">
+      <div class="num">02</div>
+      <div class="kicker">Part 2</div>
+      <h1 class="title">Dimensional modeling</h1>
+      <p class="lede">A second, purpose-built schema — for when the question shifts from “record what happened” to “summarize everything so far.”</p>
+      <div class="notes"><b>Say</b> Same data, second shape. It sits alongside the normal tables; it does not replace them.</div>
+    </section>
+    <section class="slide slide--content" data-title="Fact vs. dimension">
+      <div class="kicker">Part 2 &middot; Dimensional Modeling</div>
+      <h1 class="title">Facts are events. Dimensions are their context.</h1>
+      
+      <div class="body-area">
+<table class="cmp" style=""><thead><tr><th></th><th>Fact table</th><th>Dimension table</th></tr></thead><tbody><tr><td><b>Holds</b></td><td>an event, with numbers attached</td><td>the context: who, what, where, when</td></tr><tr><td><b>One row per</b></td><td>thing that occurred — here, one order</td><td>customer, product, employee, day</td></tr><tr><td><b>In the demo</b></td><td><code style="font-family:var(--font-mono);">fact_sales</code></td><td><code style="font-family:var(--font-mono);">dim_date</code>, <code style="font-family:var(--font-mono);">dim_customer</code>, <code style="font-family:var(--font-mono);">dim_product</code>, <code style="font-family:var(--font-mono);">dim_employee</code></td></tr><tr><td><b>Typical columns</b></td><td><code style="font-family:var(--font-mono);">quantity, revenue, cost</code> + one key per dimension</td><td>names, city, category, quarter — what you GROUP BY</td></tr></tbody></table>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 2; Kimball Group, “Star Schemas and OLAP Cubes”; Wikipedia, “Star schema”</footer>
+      <div class="notes"><b>Say</b> The fact table is narrow and long: numbers plus keys. The dimensions are wide and short: descriptive labels. You add up facts; you group and filter by dimensions.</div>
+    </section>
+    <section class="slide slide--statement" data-title="Grain">
+      <div class="kicker">Part 2 &middot; Grain</div>
+      <div class="big-line">“One row = one order.”</div>
+      <div class="stat-label" style="margin-top:20px; max-width:880px;">The <b>grain</b> is the one-sentence definition of what a single fact row <i>is</i> — decided <b>before</b> you build anything else. Get it wrong (one row per line item, by accident) and every aggregate on top silently means something else.</div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 2; Kimball Group, “Grain”</footer>
+      <div class="notes"><b>Say</b> Kimball calls declaring the grain 'the pivotal step in a dimensional design': it establishes exactly what a single fact table row represents. Everything else — which dimensions, which measures — has to agree with that sentence. Grain comes back in Part 4 as the fan-out trap.</div>
+    </section>
+    <section class="slide slide--content" data-title="dim_date: generated once">
+      <div class="kicker">Part 2 &middot; Build Tricks</div>
+      <h1 class="title">dim_date is generated once, not computed every query</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col col--wide"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">CREATE</span> <span class="kw">TABLE</span> dim_date <span class="kw">AS</span>
+<span class="kw">SELECT</span> d::date                        <span class="kw">AS</span> dateKey,
+       <span class="fn">EXTRACT</span>(quarter <span class="kw">FROM</span> d)::int   <span class="kw">AS</span> quarter,
+       <span class="fn">EXTRACT</span>(month <span class="kw">FROM</span> d)::int     <span class="kw">AS</span> month,
+       <span class="fn">to_char</span>(d, <span class="str">'Mon'</span>)              <span class="kw">AS</span> monthName,
+       <span class="fn">EXTRACT</span>(isodow <span class="kw">FROM</span> d)::int    <span class="kw">AS</span> dayOfWeek,
+       <span class="fn">to_char</span>(d, <span class="str">'Dy'</span>)               <span class="kw">AS</span> dayName
+<span class="kw">FROM</span> <span class="fn">generate_series</span>(<span class="kw">DATE</span> <span class="str">'2024-01-01'</span>,
+                     <span class="kw">DATE</span> <span class="str">'2024-12-31'</span>,
+                     <span class="kw">INTERVAL</span> <span class="str">'1 day'</span>) <span class="kw">AS</span> d;</div></div>
+        <div class="col col--narrow"><div class="bignum">366</div><div class="bignum-label">rows — every day of 2024, a leap year. Sundays included, even though the shop is closed.</div>
+        <ul class="points tight" style="margin-top:22px;"><li>Quarter, month, day name: computed <b>once</b>, stored as columns.</li><li>No query ever works out “what quarter is this date?” again.</li></ul></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 6 (CREATE TABLE dim_date → SELECT 366); Kimball Group, “Calendar Date Dimensions”</footer>
+      <div class="notes"><b>Say</b> Calendars are cheap to precompute and expensive to keep recomputing. A date dimension lists every day, not only the days something happened — the same idea as the Chair and Levon: a table of events can't show what didn't happen. Kimball: calendar date dimensions are attached to virtually every fact table.</div>
+    </section>
+    <section class="slide slide--content" data-title="The unknown-member pattern">
+      <div class="kicker">Part 2 &middot; Build Tricks</div>
+      <h1 class="title">Make “missing” a value, not an absence</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:17px; line-height:1.55; padding:18px 24px;"><span class="kw">INSERT</span> <span class="kw">INTO</span> dim_employee
+<span class="kw">VALUES</span> (<span class="num">0</span>, <span class="str">'(online)'</span>, <span class="str">'Online'</span>, <span class="str">'(none)'</span>);</div><div class="result">and in the fact table build:</div><div class="code" style="font-size:17px; line-height:1.55; padding:18px 24px;"><span class="fn">coalesce</span>(o.employeeID, <span class="num">0</span>)   <span class="kw">AS</span> employeeKey</div></div>
+        <div class="col"><ul class="points">
+          <li>Online orders have no employee: <code style="font-family:var(--font-mono);">employeeID IS NULL</code>.</li>
+          <li>Row <b>0</b> gives them one. Every fact row now has a valid, non-null employee key.</li>
+          <li>Every join to <code style="font-family:var(--font-mono);">dim_employee</code> is an ordinary join — never a “what if it's NULL” special case.</li>
+        </ul>
+        <div class="callout callout--green"><b>Payoff</b>Part 6 of the demo never needs LEFT JOIN against dim_employee. Plain inner joins lose nothing.</div></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 6; lecture-04-notes.md, Part 2; Kimball Group, “Nulls in Fact Tables”</footer>
+      <div class="notes"><b>Say</b> Why this avoids LEFT JOIN: an inner join drops a row only when it can't find a partner. With the unknown member, every fact row's employeeKey (0 for online) matches a real row in dim_employee, so the inner join finds a partner for all 600 and drops nothing. Compare Part 4: the same inner join against the raw employees table keeps 419 of 600. Kimball: nulls must be avoided in fact-table foreign keys; use a default row in the dimension instead.</div>
+    </section>
+    <section class="slide slide--section" data-title="Part 3 — Star vs. snowflake schema">
+      <div class="num">03</div>
+      <div class="kicker">Part 3</div>
+      <h1 class="title">Star vs. snowflake schema</h1>
+      <p class="lede">Two shapes for the same facts. One of them is the default.</p>
+      <div class="notes"><b>Say</b> Both are dimensional models. The only difference is what happens to the dimensions.</div>
+    </section>
+    <section class="slide slide--content" data-title="Star schema">
+      <div class="kicker">Part 3 &middot; Star</div>
+      <h1 class="title">Star: one fact, flat dimensions around it</h1>
+      
+      <div class="body-area">
+<div class="erwrap"><svg viewBox="0 0 1136 440" width="1136" height="440"><path d="M 330,75 L 374,75 L 374,180 L 418,180" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 336,69 V 81 M 341,69 V 81" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 408,180 L 418,172 M 408,180 L 418,180 M 408,180 L 418,188" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><path d="M 330,325 L 374,325 L 374,250 L 418,250" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 336,319 V 331 M 341,319 V 331" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 408,250 L 418,242 M 408,250 L 418,250 M 408,250 L 418,258" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><path d="M 806,75 L 762,75 L 762,180 L 718,180" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 795,69 V 81 M 800,69 V 81" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 728,180 L 718,172 M 728,180 L 718,180 M 728,180 L 718,188" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><path d="M 806,325 L 762,325 L 762,250 L 718,250" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 795,319 V 331 M 800,319 V 331" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 728,250 L 718,242 M 728,250 L 718,250 M 728,250 L 718,258" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><rect x="30" y="20" width="300" height="30" fill="#687F91"/><text x="44" y="41" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_DATE</text><rect x="30" y="50" width="300" height="72" fill="#fff" stroke="#DCE3EA"/><text x="44" y="71" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="74" y="71" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">dateKey</text><text x="74" y="91" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">quarter, month</text><text x="74" y="111" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">monthName, dayName</text><rect x="30" y="270" width="300" height="30" fill="#687F91"/><text x="44" y="291" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_CUSTOMER</text><rect x="30" y="300" width="300" height="72" fill="#fff" stroke="#DCE3EA"/><text x="44" y="321" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="74" y="321" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">customerKey</text><text x="74" y="341" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">customerName, city</text><text x="74" y="361" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">signupYear</text><rect x="806" y="20" width="300" height="30" fill="#687F91"/><text x="820" y="41" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_PRODUCT</text><rect x="806" y="50" width="300" height="72" fill="#fff" stroke="#DCE3EA"/><text x="820" y="71" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="850" y="71" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">productKey</text><text x="850" y="91" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">productName, brand</text><text x="850" y="111" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">category</text><rect x="806" y="270" width="300" height="30" fill="#687F91"/><text x="820" y="291" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_EMPLOYEE</text><rect x="806" y="300" width="300" height="72" fill="#fff" stroke="#DCE3EA"/><text x="820" y="321" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="850" y="321" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">employeeKey</text><text x="850" y="341" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">employeeName, branch</text><text x="850" y="361" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">managerName</text><rect x="418" y="110" width="300" height="30" fill="#1F3864"/><text x="432" y="131" font-family="Arial" font-weight="700" font-size="16" fill="#fff">FACT_SALES</text><rect x="418" y="140" width="300" height="132" fill="#fff" stroke="#DCE3EA"/><text x="432" y="161" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="462" y="161" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">orderID</text><text x="432" y="181" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="462" y="181" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">dateKey</text><text x="432" y="201" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="462" y="201" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">customerKey</text><text x="432" y="221" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="462" y="221" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">productKey</text><text x="432" y="241" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="462" y="241" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">employeeKey</text><text x="462" y="261" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">quantity, revenue, cost</text><g font-family="Arial" font-size="13" fill="#8A94A3"><text x="345" y="66">when</text><text x="338" y="344">who bought</text><text x="740" y="66">what</text><text x="742" y="344">who sold</text></g><text x="418" y="298" font-family="Arial" font-style="italic" font-size="13" fill="#8A94A3">grain: one row per order · 600 rows</text><text x="30" y="425" font-family="Arial" font-size="12" fill="#8A94A3">Line ends:  ‖ exactly one  ·  crow's foot = many. Every dimension is one join away from the fact.</text></svg></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 6 (tables and columns); Kimball Group, “Star Schemas and OLAP Cubes”</footer>
+      <div class="notes"><b>Say</b> This is exactly what Part 6 of the demo builds: fact_sales in the middle, dim_date / dim_customer / dim_product / dim_employee attached directly, each dimension flat. Read one line aloud: one customer, many fact rows. Every 'by what?' is one join from the fact.</div>
+    </section>
+    <section class="slide slide--content" data-title="Snowflake schema">
+      <div class="kicker">Part 3 &middot; Snowflake</div>
+      <h1 class="title">Snowflake: a dimension split into sub-tables</h1>
+      
+      <div class="body-area">
+<div class="erwrap"><svg viewBox="0 0 1136 440" width="1136" height="440"><path d="M 270,75 L 300,75 L 300,190 L 330,190" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 276,69 V 81 M 281,69 V 81" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 320,190 L 330,182 M 320,190 L 330,190 M 320,190 L 330,198" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><path d="M 270,325 L 300,325 L 300,260 L 330,260" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 276,319 V 331 M 281,319 V 331" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 320,260 L 330,252 M 320,260 L 330,260 M 320,260 L 330,268" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><path d="M 650,165 L 620,165 L 620,190 L 590,190" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 639,159 V 171 M 644,159 V 171" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 600,190 L 590,182 M 600,190 L 590,190 M 600,190 L 590,198" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><path d="M 650,325 L 620,325 L 620,260 L 590,260" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 639,319 V 331 M 644,319 V 331" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 600,260 L 590,252 M 600,260 L 590,260 M 600,260 L 590,268" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><path d="M 950,65 L 925,65 L 925,175 L 900,175" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 939,59 V 71 M 944,59 V 71" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 910,175 L 900,167 M 910,175 L 900,175 M 910,175 L 900,183" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><path d="M 950,295 L 925,295 L 925,195 L 900,195" fill="none" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 939,289 V 301 M 944,289 V 301" stroke="#3D6D9E" stroke-width="1.8"/><path d="M 910,195 L 900,187 M 910,195 L 900,195 M 910,195 L 900,203" stroke="#3D6D9E" stroke-width="1.8" fill="none"/><rect x="20" y="30" width="250" height="30" fill="#687F91"/><text x="34" y="51" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_DATE</text><rect x="20" y="60" width="250" height="52" fill="#fff" stroke="#DCE3EA"/><text x="34" y="81" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="64" y="81" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">dateKey</text><text x="64" y="101" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">quarter, dayName</text><rect x="20" y="280" width="250" height="30" fill="#687F91"/><text x="34" y="301" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_CUSTOMER</text><rect x="20" y="310" width="250" height="52" fill="#fff" stroke="#DCE3EA"/><text x="34" y="331" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="64" y="331" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">customerKey</text><text x="64" y="351" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">customerName, city</text><rect x="650" y="110" width="250" height="30" fill="#687F91"/><text x="664" y="131" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_PRODUCT</text><rect x="650" y="140" width="250" height="92" fill="#fff" stroke="#DCE3EA"/><text x="664" y="161" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="694" y="161" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">productKey</text><text x="694" y="181" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">productName</text><text x="664" y="201" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="694" y="201" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">categoryKey</text><text x="664" y="221" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="694" y="221" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">brandKey</text><rect x="650" y="280" width="250" height="30" fill="#687F91"/><text x="664" y="301" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_EMPLOYEE</text><rect x="650" y="310" width="250" height="52" fill="#fff" stroke="#DCE3EA"/><text x="664" y="331" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="694" y="331" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">employeeKey</text><text x="694" y="351" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">employeeName, branch</text><rect x="950" y="20" width="170" height="30" fill="#2E7D4F"/><text x="964" y="41" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_CATEGORY</text><rect x="950" y="50" width="170" height="52" fill="#fff" stroke="#DCE3EA"/><text x="964" y="71" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="994" y="71" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">categoryKey</text><text x="994" y="91" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">category</text><rect x="950" y="250" width="170" height="30" fill="#2E7D4F"/><text x="964" y="271" font-family="Arial" font-weight="700" font-size="16" fill="#fff">DIM_BRAND</text><rect x="950" y="280" width="170" height="52" fill="#fff" stroke="#DCE3EA"/><text x="964" y="301" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="994" y="301" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">brandKey</text><text x="994" y="321" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">brand</text><rect x="330" y="120" width="260" height="30" fill="#1F3864"/><text x="344" y="141" font-family="Arial" font-weight="700" font-size="16" fill="#fff">FACT_SALES</text><rect x="330" y="150" width="260" height="132" fill="#fff" stroke="#DCE3EA"/><text x="344" y="171" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#1F3864">PK</text><text x="374" y="171" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">orderID</text><text x="344" y="191" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="374" y="191" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">dateKey</text><text x="344" y="211" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="374" y="211" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">customerKey</text><text x="344" y="231" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="374" y="231" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">productKey</text><text x="344" y="251" font-family="SFMono-Regular,Consolas,monospace" font-size="13" font-weight="700" fill="#3D6D9E">FK</text><text x="374" y="251" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">employeeKey</text><text x="374" y="271" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563">revenue, cost</text><text x="950" y="395" font-family="Arial" font-weight="700" font-size="13" fill="#2E7D4F">split out of DIM_PRODUCT</text><text x="20" y="425" font-family="Arial" font-size="12" fill="#8A94A3">Same fact, same grain. Revenue by category is now two hops from the fact: fact → product → category.</text></svg></div>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 3 (the dim_category / dim_brand example); Kimball Group, “Snowflaked Dimensions”</footer>
+      <div class="notes"><b>Say</b> Same idea, but dim_product gets normalized into dim_product + dim_category + dim_brand, each joined in turn. The other dimensions stay flat here to show that snowflaking is per dimension. This split is the notes' example — the demo builds only the star.</div>
+    </section>
+    <section class="slide slide--content" data-title="Star vs. snowflake">
+      <div class="kicker">Part 3 &middot; Comparison</div>
+      <h1 class="title">Less redundancy, more joins</h1>
+      
+      <div class="body-area">
+<table class="cmp" style=""><thead><tr><th></th><th>Star</th><th>Snowflake</th></tr></thead><tbody><tr><td><b>Dimension shape</b></td><td>one flat table per dimension</td><td>a dimension split into sub-tables</td></tr><tr><td><b>Redundancy</b></td><td>category and brand repeated on every product row</td><td>each category and brand stored once</td></tr><tr><td><b>Joins per query</b></td><td>one hop: fact → dimension</td><td>one more hop per sub-table: fact → product → category</td></tr><tr><td><b>Navigability</b></td><td>one table per “by what?”</td><td>analyst must know the chain of tables</td></tr><tr><td><b>Default?</b></td><td><span style="color:var(--green-dark); font-weight:700;">yes</span></td><td><span style="color:var(--red); font-weight:700;">only as an exception</span></td></tr></tbody></table>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 3; Kimball Group, “Snowflaked Dimensions”; Wikipedia, “Snowflake schema”</footer>
+      <div class="notes"><b>Say</b> Snowflaking buys less redundancy and costs more joins and more tables for an analyst to navigate — a bad trade most of the time. Wikipedia's article adds that dimension tables are usually small next to the fact table, so the space saved is often negligible.</div>
+    </section>
+    <section class="slide slide--statement" data-title="Kimball&#x27;s guidance">
+      <div class="kicker">Part 3 &middot; The Default</div>
+      <div class="big-line">Star by default. Snowflake only as the exception — with a specific, concrete reason.</div>
+      <div class="quote">“We generally encourage you to handle many-to-one hierarchical relationships in a single dimension table rather than snowflaking.” — Kimball Group, Design Tip #105</div>
+      <footer class="tag">Source: Kimball Group, Design Tip #105, “Snowflakes, Outriggers, and Bridges” (2008); Kimball Group, “Snowflaked Dimensions”</footer>
+      <div class="notes"><b>Say</b> Kimball's reasons: snowflakes are harder for business users to understand and navigate, and can hurt query performance; a flat dimension holds the same information. Partial normalization ('outriggers') is 'acceptable in moderation', but 'the exception rather than the rule'. The notes' example of a reason is a genuinely huge dimension; note that Kimball himself calls the storage savings of snowflaking minimal.</div>
+    </section>
+    <section class="slide slide--content" data-title="Snowflake: schema vs. product">
+      <div class="kicker">Part 3 &middot; Naming Trap</div>
+      <h1 class="title">“Snowflake” means two unrelated things</h1>
+      
+      <div class="body-area">
+<div class="cols">
+          <div class="col"><div class="panel"><div class="panel__head blue">snowflake schema</div><div class="panel__body"><ul class="points tight">
+            <li>A <b>shape</b>: a dimensional model whose dimensions are normalized into sub-tables.</li>
+            <li>What this Part is about.</li></ul></div></div></div>
+          <div class="col"><div class="panel"><div class="panel__head">Snowflake Inc.</div><div class="panel__body"><ul class="points tight">
+            <li>A <b>company</b> (founded 2012) selling a cloud data platform.</li>
+            <li>You can build a star schema in it. The name is a coincidence.</li></ul></div></div></div>
+        </div>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 3; Wikipedia, “Snowflake Inc.”</footer>
+      <div class="notes"><b>Say</b> Say it out loud in class: the schema shape and the product are unrelated. A job ad asking for 'Snowflake experience' means the product, not the schema shape.</div>
+    </section>
+    <section class="slide slide--section" data-title="Part 4 — JOINs, from one idea">
+      <div class="num">04</div>
+      <div class="kicker">Part 4</div>
+      <h1 class="title">JOINs, from one idea</h1>
+      <p class="lede">Not six keywords to memorize — one mental model that all six fall out of.</p>
+      <div class="notes"><b>Say</b> Everything in this Part hangs off the next slide. If students keep one sentence from today, it's that one.</div>
+    </section>
+    <section class="slide slide--statement" data-title="The one idea">
+      <div class="kicker">Part 4 &middot; The Thesis</div>
+      <div class="big-line">A join is: pair every row of A with every row of B, <em>then keep the pairs you want.</em></div>
+      <div class="stat-label" style="margin-top:20px; max-width:860px;">Every join type is a variation on two questions: which pairs do we keep, and what do we do with the rows that found no pair?</div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 4.0</footer>
+      <div class="notes"><b>Say</b> That's genuinely it. It means CROSS JOIN isn't a weird separate thing — it's the whole Cartesian product before you've thrown anything away. We start there.</div>
+    </section>
+    <section class="slide slide--content" data-title="CROSS JOIN: every pair">
+      <div class="kicker">Part 4 &middot; Step 1 of 3</div>
+      <h1 class="title">CROSS JOIN: every row × every row</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:17px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> <span class="fn">count</span>(*) <span class="kw">FROM</span> orders <span class="kw">CROSS</span> <span class="kw">JOIN</span> customers;</div><div style="margin-top:22px;"><div class="bignum">18,000</div><div class="bignum-label">rows = 600 orders × 30 customers. Every possible pairing — most of them nonsense.</div></div>
+        <p style="margin-top:18px; font:16px/1.5 var(--font-sans); color:var(--ink-soft);">PostgreSQL defines <code style="font-family:var(--font-mono);">A CROSS JOIN B</code> as exactly <code style="font-family:var(--font-mono);">A INNER JOIN B ON TRUE</code>: a join whose condition can never fail.</p></div><div class="col col--narrow" style="flex-basis:470px; justify-content:center;"><svg viewBox="0 0 470 300" width="470" height="300"><text x="150" y="30" font-family="Arial" font-weight="700" font-size="14" fill="#1F3864" text-anchor="middle">Davit</text><text x="150" y="48" font-family="SFMono-Regular,Consolas,monospace" font-size="12" fill="#8A94A3" text-anchor="middle">id 2</text><text x="260" y="30" font-family="Arial" font-weight="700" font-size="14" fill="#1F3864" text-anchor="middle">Narek</text><text x="260" y="48" font-family="SFMono-Regular,Consolas,monospace" font-size="12" fill="#8A94A3" text-anchor="middle">id 6</text><text x="370" y="30" font-family="Arial" font-weight="700" font-size="14" fill="#1F3864" text-anchor="middle">Samvel</text><text x="370" y="48" font-family="SFMono-Regular,Consolas,monospace" font-size="12" fill="#8A94A3" text-anchor="middle">id 26</text><text x="20" y="75" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">1001 → 2</text><circle cx="150" cy="70" r="13" fill="#5B8FC4"/><circle cx="260" cy="70" r="13" fill="#5B8FC4"/><circle cx="370" cy="70" r="13" fill="#5B8FC4"/><text x="20" y="145" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">1002 → 26</text><circle cx="150" cy="140" r="13" fill="#5B8FC4"/><circle cx="260" cy="140" r="13" fill="#5B8FC4"/><circle cx="370" cy="140" r="13" fill="#5B8FC4"/><text x="20" y="215" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">1003 → 6</text><circle cx="150" cy="210" r="13" fill="#5B8FC4"/><circle cx="260" cy="210" r="13" fill="#5B8FC4"/><circle cx="370" cy="210" r="13" fill="#5B8FC4"/><text x="20" y="285" font-family="Arial" font-size="13" fill="#4B5563">9 pairs: every order × every customer</text></svg></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 3 (18000); PostgreSQL 16 docs, “Table Expressions: Joined Tables” (CROSS JOIN ≡ INNER JOIN ON TRUE; N × M rows)</footer>
+      <div class="notes"><b>Say</b> Guess before running it. No order belongs to all 30 customers — this is every possible pairing. That's the point: it's the raw material every other join is carved out of. The grid zooms in on 3 orders × 3 customers; the real product is 600 × 30.</div>
+    </section>
+    <section class="slide slide--content" data-title="WHERE narrows the pairs">
+      <div class="kicker">Part 4 &middot; Step 2 of 3</div>
+      <h1 class="title">Filter the pairs with WHERE: 9 → 3</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col col--wide"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> o.orderID, c.firstName, c.lastName
+<span class="kw">FROM</span> orders o <span class="kw">CROSS</span> <span class="kw">JOIN</span> customers c
+<span class="kw">WHERE</span> o.orderID <span class="kw">IN</span> (<span class="num">1001</span>, <span class="num">1002</span>, <span class="num">1003</span>)
+  <span class="kw">AND</span> c.customerID <span class="kw">IN</span> (<span class="num">2</span>, <span class="num">6</span>, <span class="num">26</span>)
+  <span class="kw">AND</span> o.customerID = c.customerID
+<span class="kw">ORDER</span> <span class="kw">BY</span> o.orderID;</div><div class="result">without the last condition: 9 rows · with it: 3 rows</div><table class="cmp compact tight" style=""><thead><tr><th>orderid</th><th>firstname</th><th>lastname</th></tr></thead><tbody><tr><td>1001</td><td>Davit</td><td>Petrosyan</td></tr><tr><td>1002</td><td>Samvel</td><td>Nazaryan</td></tr><tr><td>1003</td><td>Narek</td><td>Manukyan</td></tr></tbody></table></div><div class="col col--narrow" style="flex-basis:470px; justify-content:center;"><svg viewBox="0 0 470 300" width="470" height="300"><text x="150" y="30" font-family="Arial" font-weight="700" font-size="14" fill="#1F3864" text-anchor="middle">Davit</text><text x="150" y="48" font-family="SFMono-Regular,Consolas,monospace" font-size="12" fill="#8A94A3" text-anchor="middle">id 2</text><text x="260" y="30" font-family="Arial" font-weight="700" font-size="14" fill="#1F3864" text-anchor="middle">Narek</text><text x="260" y="48" font-family="SFMono-Regular,Consolas,monospace" font-size="12" fill="#8A94A3" text-anchor="middle">id 6</text><text x="370" y="30" font-family="Arial" font-weight="700" font-size="14" fill="#1F3864" text-anchor="middle">Samvel</text><text x="370" y="48" font-family="SFMono-Regular,Consolas,monospace" font-size="12" fill="#8A94A3" text-anchor="middle">id 26</text><text x="20" y="75" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">1001 → 2</text><circle cx="150" cy="70" r="13" fill="#2E7D4F" stroke="#2E7D4F" stroke-width="2"/><circle cx="260" cy="70" r="13" fill="#fff" stroke="#DCE3EA" stroke-width="2"/><circle cx="370" cy="70" r="13" fill="#fff" stroke="#DCE3EA" stroke-width="2"/><text x="20" y="145" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">1002 → 26</text><circle cx="150" cy="140" r="13" fill="#fff" stroke="#DCE3EA" stroke-width="2"/><circle cx="260" cy="140" r="13" fill="#fff" stroke="#DCE3EA" stroke-width="2"/><circle cx="370" cy="140" r="13" fill="#2E7D4F" stroke="#2E7D4F" stroke-width="2"/><text x="20" y="215" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">1003 → 6</text><circle cx="150" cy="210" r="13" fill="#fff" stroke="#DCE3EA" stroke-width="2"/><circle cx="260" cy="210" r="13" fill="#2E7D4F" stroke="#2E7D4F" stroke-width="2"/><circle cx="370" cy="210" r="13" fill="#fff" stroke="#DCE3EA" stroke-width="2"/><text x="20" y="285" font-family="Arial" font-size="13" fill="#4B5563">keep the 3 pairs where the ids match</text></svg></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 3 (9 rows, then 3 rows)</footer>
+      <div class="notes"><b>Say</b> First run it without the last AND line: 9 rows, each order next to all three customers. Ask which three pairs are true. Then add o.customerID = c.customerID: 3 rows. The query in the demo also shows the 'order says' and 'customer row' columns side by side; this slide trims them to fit.</div>
+    </section>
+    <section class="slide slide--content" data-title="Same result as JOIN ... ON">
+      <div class="kicker">Part 4 &middot; Step 3 of 3</div>
+      <h1 class="title">Now write it as JOIN … ON — same 3 rows</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> o.orderID, c.firstName, c.lastName, o.orderTotal
+<span class="kw">FROM</span> orders o
+<span class="kw">JOIN</span> customers c <span class="kw">ON</span> c.customerID = o.customerID
+<span class="kw">WHERE</span> o.orderID <span class="kw">IN</span> (<span class="num">1001</span>, <span class="num">1002</span>, <span class="num">1003</span>)
+<span class="kw">ORDER</span> <span class="kw">BY</span> o.orderID;</div><table class="cmp compact tight" style="margin-top:14px;"><thead><tr><th>orderid</th><th>firstname</th><th>lastname</th><th>ordertotal</th></tr></thead><tbody><tr><td>1001</td><td>Davit</td><td>Petrosyan</td><td>211.65</td></tr><tr><td>1002</td><td>Samvel</td><td>Nazaryan</td><td>249.00</td></tr><tr><td>1003</td><td>Narek</td><td>Manukyan</td><td>747.00</td></tr></tbody></table></div><div class="col col--narrow" style="flex-basis:380px;"><div class="panel"><div class="panel__head blue">Why this order matters</div><div class="panel__body"><ul class="points tight">
+          <li>Seen first, <b>JOIN … ON</b> looks like a magic combine-tables command.</li>
+          <li>Seen <b>derived</b> from CROSS JOIN + WHERE, it's just filtered pairing.</li>
+          <li>The database doesn't build all 18,000 pairs — but the answer is always the same as if it had.</li></ul></div></div></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 3; lecture-04-notes.md, Part 4.1; PostgreSQL 16 docs, “Planner/Optimizer” (every plan, same result)</footer>
+      <div class="notes"><b>Say</b> ON puts the matching condition next to the table it's about. JOIN alone means INNER JOIN. PostgreSQL's planner picks a nested-loop, merge or hash join by estimated cost, and every plan produces the same result — think the slow way, let the database do the fast one.</div>
+    </section>
+    <section class="slide slide--content" data-title="INNER JOIN: only the overlap">
+      <div class="kicker">Part 4 &middot; INNER JOIN</div>
+      <h1 class="title">INNER JOIN keeps only pairs that match</h1>
+      
+      <div class="body-area">
+<div class="vennrow"><svg viewBox="0 0 380 240" width="380" height="240"><defs><clipPath id="clipA1"><circle cx="140" cy="110" r="95"/></clipPath></defs><circle cx="240" cy="110" r="95" fill="#5B8FC4" fill-opacity=".55" clip-path="url(#clipA1)"/><circle cx="140" cy="110" r="95" fill="none" stroke="#1F3864" stroke-width="2"/><circle cx="240" cy="110" r="95" fill="none" stroke="#1F3864" stroke-width="2"/><text x="90" y="228" font-family="Arial" font-weight="700" font-size="15" fill="#1F3864" text-anchor="middle">orders</text><text x="290" y="228" font-family="Arial" font-weight="700" font-size="15" fill="#1F3864" text-anchor="middle">employees</text></svg><div class="sidebox"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> <span class="fn">count</span>(*)
+<span class="kw">FROM</span> orders o
+<span class="kw">JOIN</span> customers c <span class="kw">ON</span> c.customerID = o.customerID
+<span class="kw">JOIN</span> products  p <span class="kw">ON</span> p.productID  = o.productID
+<span class="kw">JOIN</span> employees e <span class="kw">ON</span> e.employeeID = o.employeeID;</div><div style="display:flex; gap:36px; margin-top:16px;"><div><div class="bignum">419</div><div class="bignum-label">rows, not 600</div></div>
+        <div><div class="bignum bad">181</div><div class="bignum-label">online orders, gone: employeeID IS NULL matches nobody</div></div></div></div></div>
+        <div class="callout callout--red" style="margin-top:14px;"><b>Drill this until it's automatic</b>An inner join doesn't complain when rows don't match — it just quietly leaves them out.</div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (419); lecture-04-notes.md, Part 4.2; PostgreSQL 16 docs, “Joined Tables” (INNER JOIN)</footer>
+      <div class="notes"><b>Say</b> Anything on either side with no match simply disappears — no error, no placeholder, gone. The Venn picture shows which rows survive; it doesn't show how many rows come out (a join can also multiply rows — that's the fan-out trap later).</div>
+    </section>
+    <section class="slide slide--statement" data-title="93,534.71 — a real sum, wrong">
+      <div class="kicker">Part 4 &middot; INNER JOIN</div>
+      <div class="stat">93,534.71</div>
+      <div class="stat-label">“completed revenue”, after joining employees to get the names</div>
+      <div class="stat-label" style="margin-top:22px; max-width:880px;">A real sum, correctly computed — over a silently incomplete set of rows. That's not a bug; it's the definition of inner join. It's just <b>invisible</b> unless you go looking.</div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (93534.71); lecture-04-notes.md, Part 4.2</footer>
+      <div class="notes"><b>Say</b> The query: SELECT sum(o.orderTotal) FROM orders o JOIN employees e ON e.employeeID = o.employeeID WHERE o.status = 'completed'. Ask: what would make you suspicious of this number? Answer: nothing on screen — only knowing that online orders have no employee.</div>
+    </section>
+    <section class="slide slide--content" data-title="Error: ambiguous column">
+      <div class="kicker">Part 4 &middot; Aliasing</div>
+      <h1 class="title">Two tables, one column name: ambiguous</h1>
+      
+      <div class="body-area">
+<div class="code" style="font-size:17px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> orderID, customerID, firstName
+<span class="kw">FROM</span> orders
+<span class="kw">JOIN</span> customers <span class="kw">ON</span> customers.customerID = orders.customerID
+<span class="kw">WHERE</span> orderID = <span class="num">1001</span>;</div><div class="err">ERROR:  column reference "customerid" is ambiguous</div><ul class="points tight" style="margin-top:18px;"><li><b>customerID</b> exists in both tables; the engine refuses to guess — even though the values are equal on every joined row.</li>
+        <li>Fix: alias the tables (<code style="font-family:var(--font-mono);">FROM orders o JOIN customers c</code>) and qualify: <code style="font-family:var(--font-mono);">o.customerID</code>.</li></ul>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 3 (error text from running it); lecture-04-notes.md, Part 4.3</footer>
+      <div class="notes"><b>Say</b> Error on purpose — read the message aloud. orderID and firstName exist in only one table, so they're fine. The rule is about names, not values. Habit: in any query with two tables, prefix every column, even the unambiguous ones.</div>
+    </section>
+    <section class="slide slide--content" data-title="Error: the alias replaced the name">
+      <div class="kicker">Part 4 &middot; Aliasing</div>
+      <h1 class="title">An alias doesn't add a nickname — it replaces the name</h1>
+      
+      <div class="body-area">
+<div class="code" style="font-size:17px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> orders.orderID
+<span class="kw">FROM</span> orders o
+<span class="kw">WHERE</span> o.orderID = <span class="num">1001</span>;</div><div class="err">ERROR:  invalid reference to FROM-clause entry for table "orders"
+HINT:  Perhaps you meant to reference the table alias "o".</div><p style="margin-top:18px; font:18px/1.5 var(--font-sans); color:var(--ink-soft); max-width:1000px;">Once you write <code style="font-family:var(--font-mono);">FROM orders o</code>, the name <code style="font-family:var(--font-mono);">orders</code> stops existing for the rest of that query. PostgreSQL's hint tells you exactly what happened.</p>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 3 (error and hint text from running it); lecture-04-notes.md, Part 4.3</footer>
+      <div class="notes"><b>Say</b> Error on purpose. The HINT line is PostgreSQL telling you the fix. Same idea returns in self-joins, where aliases are the only way to tell two copies of one table apart.</div>
+    </section>
+    <section class="slide slide--content" data-title="USING and NATURAL JOIN">
+      <div class="kicker">Part 4 &middot; Shorthand</div>
+      <h1 class="title">USING is shorthand. NATURAL JOIN hides the condition.</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> customerID, c.firstName, o.orderID
+<span class="kw">FROM</span> orders o
+<span class="kw">JOIN</span> customers c <span class="kw">USING</span> (customerID)
+<span class="kw">WHERE</span> o.orderID = <span class="num">1001</span>;</div><p style="margin-top:12px; font:16px/1.5 var(--font-sans); color:var(--ink-soft);"><b>USING (customerID)</b> = ON o.customerID = c.customerID, and the column appears once in the output.</p></div>
+        <div class="col"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> <span class="fn">count</span>(*)
+<span class="kw">FROM</span> orders <span class="kw">NATURAL</span> <span class="kw">JOIN</span> sales;</div><div style="margin-top:14px;"><div class="bignum bad">97</div><div class="bignum-label">rows — both tables hold the same 600 sales</div></div></div></div>
+        <div class="callout callout--red" style="margin-top:14px;"><b>The join condition should always be visible in the code</b>NATURAL JOIN joined on every shared column name — orderID and eleven more, deliveryDate and rating among them. NULL = NULL is not true, so rows with a NULL there vanished. And it changes silently the day either table gains a column with a matching name. Never use it in real code.</div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 3 (97); PostgreSQL 16 docs, “Joined Tables” (USING, NATURAL) and “Comparison Functions” (NULL comparisons)</footer>
+      <div class="notes"><b>Say</b> Guess before revealing why 97. The two tables share twelve column names; NATURAL JOIN requires all twelve to be equal. deliveryDate is NULL for every in-store order, and a comparison with NULL is never true, so those rows are thrown out. Only online orders that also got a rating survive. The PostgreSQL manual itself calls NATURAL 'considerably more risky' than USING.</div>
+    </section>
+    <section class="slide slide--content" data-title="LEFT JOIN">
+      <div class="kicker">Part 4 &middot; Outer Joins</div>
+      <h1 class="title">LEFT JOIN: keep every row on the left</h1>
+      
+      <div class="body-area">
+<div class="vennrow"><svg viewBox="0 0 380 240" width="380" height="240"><defs><clipPath id="clipA2"><circle cx="140" cy="110" r="95"/></clipPath></defs><circle cx="140" cy="110" r="95" fill="#5B8FC4" fill-opacity=".55"/><circle cx="240" cy="110" r="95" fill="#5B8FC4" fill-opacity=".35" clip-path="url(#clipA2)"/><circle cx="140" cy="110" r="95" fill="none" stroke="#1F3864" stroke-width="2"/><circle cx="240" cy="110" r="95" fill="none" stroke="#1F3864" stroke-width="2"/><text x="90" y="228" font-family="Arial" font-weight="700" font-size="15" fill="#1F3864" text-anchor="middle">orders</text><text x="290" y="228" font-family="Arial" font-weight="700" font-size="15" fill="#1F3864" text-anchor="middle">employees</text></svg><div class="sidebox"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> <span class="fn">count</span>(*)
+<span class="kw">FROM</span> orders o
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> employees e <span class="kw">ON</span> e.employeeID = o.employeeID;</div><div style="display:flex; gap:36px; margin-top:16px;"><div><div class="bignum good">600</div><div class="bignum-label">rows — the 181 online orders survive, with the employee columns NULL</div></div></div>
+       <p style="margin-top:12px; font:16px/1.5 var(--font-sans); color:var(--ink-soft);">Group by <code style="font-family:var(--font-mono);">coalesce(e.branch, 'Online')</code> and online revenue lands in a visible “Online” bucket: <b>52,400.41</b> of completed revenue, the largest of the four.</p></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (600; revenue per branch); PostgreSQL 16 docs, “Joined Tables” (LEFT OUTER JOIN)</footer>
+      <div class="notes"><b>Say</b> INNER JOIN, but we refuse to lose rows from the left side. Where there's no match on the right, the row stays and the right-hand columns are NULL. 'Left' just means the table written before the word JOIN. Branch revenue (completed): Online 52,400.41; Yerevan Center 48,113.04; Yerevan Mall 35,934.64; Gyumri 9,487.03.</div>
+    </section>
+    <section class="slide slide--content" data-title="RIGHT JOIN">
+      <div class="kicker">Part 4 &middot; Outer Joins</div>
+      <h1 class="title">RIGHT JOIN: the mirror image</h1>
+      
+      <div class="body-area">
+<div class="vennrow"><svg viewBox="0 0 380 240" width="380" height="240"><defs><clipPath id="clipA3"><circle cx="140" cy="110" r="95"/></clipPath></defs><circle cx="240" cy="110" r="95" fill="#5B8FC4" fill-opacity=".55"/><circle cx="140" cy="110" r="95" fill="#5B8FC4" fill-opacity=".35" clip-path="url(#clipA3)"/><circle cx="140" cy="110" r="95" fill="none" stroke="#1F3864" stroke-width="2"/><circle cx="240" cy="110" r="95" fill="none" stroke="#1F3864" stroke-width="2"/><text x="90" y="228" font-family="Arial" font-weight="700" font-size="15" fill="#1F3864" text-anchor="middle">orders</text><text x="290" y="228" font-family="Arial" font-weight="700" font-size="15" fill="#1F3864" text-anchor="middle">customers</text></svg><div class="sidebox"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> <span class="fn">count</span>(*)
+<span class="kw">FROM</span> orders o
+<span class="kw">RIGHT</span> <span class="kw">JOIN</span> customers c <span class="kw">ON</span> c.customerID = o.customerID;</div><div style="display:flex; gap:36px; margin-top:16px;"><div><div class="bignum">602</div><div class="bignum-label">rows: all 600 orders, plus one NULL-padded row for each of the 2 customers who never ordered</div></div></div>
+       <p style="margin-top:12px; font:16px/1.5 var(--font-sans); color:var(--ink-soft);">Exactly the same as <code style="font-family:var(--font-mono);">customers LEFT JOIN orders</code>. Keep the table you care about on the left and you never need RIGHT.</p></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (602); PostgreSQL 16 docs, “Joined Tables” (RIGHT OUTER JOIN)</footer>
+      <div class="notes"><b>Say</b> A RIGHT JOIN B keeps every row of B, which makes it B LEFT JOIN A. Writing LEFT always is this course's style choice, so every query reads the same way — know RIGHT for when you meet it in someone else's code.</div>
+    </section>
+    <section class="slide slide--content" data-title="FULL JOIN">
+      <div class="kicker">Part 4 &middot; Outer Joins</div>
+      <h1 class="title">FULL JOIN: keep everything from both sides</h1>
+      
+      <div class="body-area">
+<div class="vennrow"><svg viewBox="0 0 380 240" width="380" height="240"><defs><clipPath id="clipA4"><circle cx="140" cy="110" r="95"/></clipPath></defs><circle cx="140" cy="110" r="95" fill="#5B8FC4" fill-opacity=".55"/><circle cx="240" cy="110" r="95" fill="#5B8FC4" fill-opacity=".55"/><circle cx="140" cy="110" r="95" fill="none" stroke="#1F3864" stroke-width="2"/><circle cx="240" cy="110" r="95" fill="none" stroke="#1F3864" stroke-width="2"/><text x="90" y="228" font-family="Arial" font-weight="700" font-size="15" fill="#1F3864" text-anchor="middle">customers</text><text x="290" y="228" font-family="Arial" font-weight="700" font-size="15" fill="#1F3864" text-anchor="middle">employees</text></svg><div class="sidebox"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> <span class="kw">CASE</span> <span class="kw">WHEN</span> e.employeeID <span class="kw">IS</span> <span class="kw">NULL</span> <span class="kw">THEN</span> <span class="str">'customer only'</span>
+            <span class="kw">WHEN</span> c.customerID <span class="kw">IS</span> <span class="kw">NULL</span> <span class="kw">THEN</span> <span class="str">'employee only'</span>
+            <span class="kw">ELSE</span> <span class="str">'on both lists'</span> <span class="kw">END</span> <span class="kw">AS</span> status,
+       <span class="fn">count</span>(*) <span class="kw">AS</span> people
+<span class="kw">FROM</span> customers c
+<span class="kw">FULL</span> <span class="kw">JOIN</span> employees e
+  <span class="kw">ON</span> e.firstName = c.firstName <span class="kw">AND</span> e.lastName = c.lastName
+<span class="kw">GROUP</span> <span class="kw">BY</span> <span class="num">1</span> <span class="kw">ORDER</span> <span class="kw">BY</span> <span class="num">1</span>;</div><table class="cmp compact tight" style="margin-top:12px; max-width:420px;"><thead><tr><th>status</th><th>people</th></tr></thead><tbody><tr><td>customer only</td><td>28</td></tr><tr><td>employee only</td><td>6</td></tr><tr><td>on both lists</td><td>2</td></tr></tbody></table></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (28 / 6 / 2); PostgreSQL 16 docs, “Joined Tables” (FULL OUTER JOIN)</footer>
+      <div class="notes"><b>Say</b> LEFT and RIGHT combined. Its classic use is reconciling two lists — bank statement against ledger. 28 + 6 + 2 = 36 people. Hold on to those 2 'on both lists': it's the name-collision trap coming up.</div>
+    </section>
+    <section class="slide slide--content" data-title="Anti-join: which X have no Y?">
+      <div class="kicker">Part 4 &middot; Outer Joins</div>
+      <h1 class="title">The anti-join: LEFT JOIN + IS NULL</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> c.customerID, c.firstName, c.lastName
+<span class="kw">FROM</span> customers c
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> orders o <span class="kw">ON</span> o.customerID = c.customerID
+<span class="kw">WHERE</span> o.orderID <span class="kw">IS</span> <span class="kw">NULL</span>;</div><table class="cmp compact tight" style="margin-top:12px;"><thead><tr><th>customerid</th><th>firstname</th><th>lastname</th></tr></thead><tbody><tr><td>24</td><td>Levon</td><td>Arakelyan</td></tr><tr><td>29</td><td>Astghik</td><td>Danielyan</td></tr></tbody></table></div><div class="col"><div style="display:flex; gap:40px;">
+          <div><div class="bignum">2</div><div class="bignum-label">of 30 customers with zero orders</div></div>
+          <div><div class="bignum">1</div><div class="bignum-label">of 37 products never ordered: #35 Ergonomic Chair Pro, Chairs, 6 in stock</div></div></div>
+        <ul class="points tight" style="margin-top:22px;"><li>A real match would fill the right-hand columns. NULL there means: <b>nothing matched</b>.</li>
+        <li>Test the right table's <b>key</b> — a primary key is never NULL in a real row.</li></ul></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (anti-join queries); lecture-04-notes.md, Part 4.5</footer>
+      <div class="notes"><b>Say</b> Teach it as a named pattern, not a clever trick. 'Which X have no Y' comes up constantly: customers with no orders, products never sold, employees with no reports. The flat sales table could never answer this: a table of sales only contains things that sold.</div>
+    </section>
+    <section class="slide slide--content" data-title="count(*) vs count(column)">
+      <div class="kicker">Part 4 &middot; Sanity Check</div>
+      <h1 class="title">count(*) counts rows. count(column) counts non-NULLs.</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> c.firstName, <span class="fn">count</span>(*) <span class="kw">AS</span> orders
+<span class="kw">FROM</span> customers c
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> orders o
+  <span class="kw">ON</span> o.customerID = c.customerID
+<span class="kw">GROUP</span> <span class="kw">BY</span> c.customerID, c.firstName;</div><table class="cmp compact tight" style="margin-top:12px;"><thead><tr><th>firstname</th><th>orders</th></tr></thead><tbody><tr><td>Levon</td><td><b style="color:var(--red);">1</b></td></tr><tr><td>Astghik</td><td><b style="color:var(--red);">1</b></td></tr></tbody></table></div><div class="col"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> c.firstName, <span class="fn">count</span>(o.orderID) <span class="kw">AS</span> orders
+<span class="kw">FROM</span> customers c
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> orders o
+  <span class="kw">ON</span> o.customerID = c.customerID
+<span class="kw">GROUP</span> <span class="kw">BY</span> c.customerID, c.firstName;</div><table class="cmp compact tight" style="margin-top:12px;"><thead><tr><th>firstname</th><th>orders</th></tr></thead><tbody><tr><td>Levon</td><td><b style="color:var(--green-dark);">0</b></td></tr><tr><td>Astghik</td><td><b style="color:var(--green-dark);">0</b></td></tr></tbody></table></div></div><div class="callout callout--green" style="margin-top:14px;"><b>A reflex, not a trick</b>After every outer join, run both. They should diverge exactly at the unmatched rows — if they don't, something about the join is wrong.</div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (count queries); PostgreSQL 16 docs, “Aggregate Functions” (count(*) vs count(expr))</footer>
+      <div class="notes"><b>Say</b> Levon has no orders, but the LEFT JOIN gave him one row full of NULLs, and count(*) counts rows. count(o.orderID) skips the NULL. The demo query also orders by the count and shows Diana (4) and Lusine (5), where both versions agree.</div>
+    </section>
+    <section class="slide slide--content" data-title="WHERE vs ON: the rule">
+      <div class="kicker">Part 4 &middot; The Most Important Trap</div>
+      <h1 class="title">WHERE vs. ON: it depends on when each runs</h1>
+      
+      <div class="body-area">
+<table class="cmp" style=""><thead><tr><th></th><th>ON</th><th>WHERE</th></tr></thead><tbody><tr><td><b>Runs</b></td><td><b>while</b> deciding what matches — before NULL-padding</td><td><b>after</b> the whole join, NULL-padding included</td></tr><tr><td><b>Inner join</b></td><td>same result</td><td>same result</td></tr><tr><td><b>Outer join</b></td><td>keeps the unmatched rows</td><td><span style="color:var(--red); font-weight:700;">can delete the NULL-padded rows — the LEFT JOIN becomes an INNER JOIN</span></td></tr></tbody></table><p style="margin-top:18px; font:18px/1.5 var(--font-sans); color:var(--ink-soft); max-width:1000px;">A <code style="font-family:var(--font-mono);">WHERE</code> that mentions the right-hand table after a LEFT JOIN should always make you stop and ask: am I filtering matches, or un-inviting the rows my LEFT JOIN was supposed to protect?</p>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 4.7; PostgreSQL 16 docs, “Joined Tables” (ON vs. WHERE with outer joins)</footer>
+      <div class="notes"><b>Say</b> With inner joins only, it genuinely doesn't matter where a condition lives. With outer joins it matters completely. The PostgreSQL manual says it directly: a restriction in ON is processed before the join, one in WHERE after the join — 'That does not matter with inner joins, but it matters a lot with outer joins.'</div>
+    </section>
+    <section class="slide slide--content" data-title="WHERE version: 12 rows">
+      <div class="kicker">Part 4 &middot; WHERE vs. ON · 1</div>
+      <h1 class="title">Filter in WHERE → 12 rows, Chairs gone</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col col--wide"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> p.category, <span class="fn">count</span>(o.orderID) <span class="kw">AS</span> orders,
+       <span class="fn">sum</span>(o.orderTotal) <span class="kw">AS</span> revenue
+<span class="kw">FROM</span> products p
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> orders o <span class="kw">ON</span> o.productID = p.productID
+<span class="kw">WHERE</span> o.status = <span class="str">'completed'</span>
+<span class="kw">GROUP</span> <span class="kw">BY</span> p.category
+<span class="kw">ORDER</span> <span class="kw">BY</span> revenue <span class="kw">DESC</span> <span class="kw">NULLS</span> <span class="kw">LAST</span>;</div></div>
+        <div class="col"><table class="cmp compact tight" style=""><thead><tr><th>category</th><th>orders</th><th>revenue</th></tr></thead><tbody><tr><td>Laptops</td><td>46</td><td>53412.00</td></tr><tr><td>Phones</td><td>38</td><td>25991.90</td></tr><tr><td>Audio</td><td>55</td><td>15846.55</td></tr><tr><td>…</td><td>…</td><td>…</td></tr><tr><td>Networking</td><td>17</td><td>2225.75</td></tr><tr><td>Cables</td><td>77</td><td>1651.17</td></tr></tbody></table><div class="bignum bad" style="margin-top:14px;">12 rows</div><div class="bignum-label">no Chairs row</div></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (12 rows)</footer>
+      <div class="notes"><b>Say</b> Walk the execution order: the LEFT JOIN runs first and keeps the Chair row, with o.status NULL. Then WHERE runs: NULL = 'completed' is not true, and the Chair row is thrown out along with the genuinely non-completed rows. No error. Middle rows (Tablets … Printers) omitted to fit; full output in the demo.</div>
+    </section>
+    <section class="slide slide--statement" data-title="ON invites, WHERE decides who stays">
+      <div class="kicker">Part 4 &middot; WHERE vs. ON</div>
+      <div class="big-line"><em>ON</em> decides who gets invited to the party. <em>WHERE</em> decides who's allowed to stay after it already happened.</div>
+      <div class="stat-label" style="margin-top:20px; max-width:880px;">…including the guests the LEFT JOIN invited for free — the NULL-padded ones.</div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 4.7</footer>
+      <div class="notes"><b>Say</b> Use this line verbatim. The NULL-padded Chair row was a guest the LEFT JOIN invited for free; the WHERE clause showed it the door. Moving the condition into ON means it's only used to decide who matches — nobody gets thrown out afterwards.</div>
+    </section>
+    <section class="slide slide--content" data-title="ON version: 13 rows">
+      <div class="kicker">Part 4 &middot; WHERE vs. ON · 2</div>
+      <h1 class="title">Same condition in ON → 13 rows, Chairs at 0</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col col--wide"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> p.category, <span class="fn">count</span>(o.orderID) <span class="kw">AS</span> orders,
+       <span class="fn">coalesce</span>(<span class="fn">sum</span>(o.orderTotal), <span class="num">0</span>) <span class="kw">AS</span> revenue
+<span class="kw">FROM</span> products p
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> orders o <span class="kw">ON</span> o.productID = p.productID
+                  <span class="kw">AND</span> o.status = <span class="str">'completed'</span>
+<span class="kw">GROUP</span> <span class="kw">BY</span> p.category
+<span class="kw">ORDER</span> <span class="kw">BY</span> revenue <span class="kw">DESC</span>;</div></div>
+        <div class="col"><table class="cmp compact tight" style=""><thead><tr><th>category</th><th>orders</th><th>revenue</th></tr></thead><tbody><tr><td>Laptops</td><td>46</td><td>53412.00</td></tr><tr><td>Phones</td><td>38</td><td>25991.90</td></tr><tr><td>…</td><td>…</td><td>…</td></tr><tr><td>Cables</td><td>77</td><td>1651.17</td></tr><tr><td><b style="color:var(--green-dark);">Chairs</b></td><td><b style="color:var(--green-dark);">0</b></td><td><b style="color:var(--green-dark);">0</b></td></tr></tbody></table><div class="bignum good" style="margin-top:14px;">13 rows</div><div class="bignum-label">Chairs present, revenue 0</div></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (13 rows); PostgreSQL 16 docs, “Aggregate Functions” (sum of no rows is NULL)</footer>
+      <div class="notes"><b>Say</b> Rule to remember: conditions on the right table of a LEFT JOIN go in ON; conditions on the left table go in WHERE. coalesce turns the NULL sum into 0: sum of no rows is NULL, not zero (PostgreSQL docs, Aggregate Functions).</div>
+    </section>
+    <section class="slide slide--content" data-title="Self-join: direct manager">
+      <div class="kicker">Part 4 &middot; Self-Joins</div>
+      <h1 class="title">Self-join: one table, two roles</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:15px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> e.firstName || <span class="str">' '</span> || e.lastName <span class="kw">AS</span> employee,
+       m.firstName || <span class="str">' '</span> || m.lastName <span class="kw">AS</span> manager
+<span class="kw">FROM</span> employees e
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> employees m
+       <span class="kw">ON</span> m.employeeID = e.managerID;</div><div style="margin-top:14px;"><div class="bignum">8</div><div class="bignum-label">rows — every employee, including Vahe, whose manager is NULL</div></div>
+        <ul class="points tight" style="margin-top:14px;"><li><b>e</b> plays the employee, <b>m</b> the manager — same table.</li><li>Aliases are mandatory: unaliased, it's an error.</li><li><b>LEFT</b>, or the top of the hierarchy disappears.</li></ul></div><div class="col" style="justify-content:center;"><svg viewBox="0 0 600 290" width="560" height="271"><path d="M 298,60 V 82 M 73,82 H 523 M 73,82 V 104 M 223,82 V 104 M 373,82 V 104 M 523,82 V 104" fill="none" stroke="#687F91" stroke-width="1.5"/><path d="M 373,154 V 176 M 223,176 H 373 M 223,176 V 198 M 373,176 V 198" fill="none" stroke="#687F91" stroke-width="1.5"/><path d="M 523,154 V 198" fill="none" stroke="#687F91" stroke-width="1.5"/><rect x="235" y="10" width="126" height="50" rx="6" fill="#1F3864" stroke="#687F91" stroke-width="1.5"/><text x="298" y="31" font-family="Arial" font-weight="700" font-size="16" fill="#fff" text-anchor="middle">Vahe</text><text x="298" y="50" font-family="Arial" font-size="13" fill="#BFD6EC" text-anchor="middle">Store Manager</text><rect x="10" y="104" width="126" height="50" rx="6" fill="#fff" stroke="#687F91" stroke-width="1.5"/><text x="73" y="125" font-family="Arial" font-weight="700" font-size="16" fill="#141517" text-anchor="middle">Gor</text><text x="73" y="144" font-family="Arial" font-size="13" fill="#4B5563" text-anchor="middle">Senior Sales</text><rect x="160" y="104" width="126" height="50" rx="6" fill="#fff" stroke="#687F91" stroke-width="1.5"/><text x="223" y="125" font-family="Arial" font-weight="700" font-size="16" fill="#141517" text-anchor="middle">Ani</text><text x="223" y="144" font-family="Arial" font-size="13" fill="#4B5563" text-anchor="middle">Sales Associate</text><rect x="310" y="104" width="126" height="50" rx="6" fill="#fff" stroke="#687F91" stroke-width="1.5"/><text x="373" y="125" font-family="Arial" font-weight="700" font-size="16" fill="#141517" text-anchor="middle">Hayk</text><text x="373" y="144" font-family="Arial" font-size="13" fill="#4B5563" text-anchor="middle">Senior Sales</text><rect x="460" y="104" width="126" height="50" rx="6" fill="#fff" stroke="#687F91" stroke-width="1.5"/><text x="523" y="125" font-family="Arial" font-weight="700" font-size="16" fill="#141517" text-anchor="middle">Marine</text><text x="523" y="144" font-family="Arial" font-size="13" fill="#4B5563" text-anchor="middle">Senior Sales</text><rect x="160" y="198" width="126" height="50" rx="6" fill="#fff" stroke="#687F91" stroke-width="1.5"/><text x="223" y="219" font-family="Arial" font-weight="700" font-size="16" fill="#141517" text-anchor="middle">Nare</text><text x="223" y="238" font-family="Arial" font-size="13" fill="#4B5563" text-anchor="middle">Sales Associate</text><rect x="310" y="198" width="126" height="50" rx="6" fill="#fff" stroke="#687F91" stroke-width="1.5"/><text x="373" y="219" font-family="Arial" font-weight="700" font-size="16" fill="#141517" text-anchor="middle">Lilit</text><text x="373" y="238" font-family="Arial" font-size="13" fill="#4B5563" text-anchor="middle">Sales Associate</text><rect x="460" y="198" width="126" height="50" rx="6" fill="#fff" stroke="#687F91" stroke-width="1.5"/><text x="523" y="219" font-family="Arial" font-weight="700" font-size="16" fill="#141517" text-anchor="middle">Arman</text><text x="523" y="238" font-family="Arial" font-size="13" fill="#4B5563" text-anchor="middle">Sales Associate</text><text x="10" y="280" font-family="Arial" font-size="14" fill="#8A94A3">employees.managerID points at another row of employees</text></svg></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 5 (8 rows); lecture_4/steps/00-setup.sql (managerID values)</footer>
+      <div class="notes"><b>Say</b> Error on purpose first if time allows: FROM employees JOIN employees → ERROR: table name "employees" specified more than once. The demo's version also selects e.position and orders by manager. Any hierarchy stored as 'this table points to itself' — org charts, category trees, comment replies — uses this exact shape.</div>
+    </section>
+    <section class="slide slide--content" data-title="Self-join: two hops, and counts">
+      <div class="kicker">Part 4 &middot; Self-Joins</div>
+      <h1 class="title">Two more self-joins: a second hop, and a count</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:14px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> e.firstName <span class="kw">AS</span> employee,
+       m.firstName <span class="kw">AS</span> manager,
+       mm.firstName <span class="kw">AS</span> managers_manager
+<span class="kw">FROM</span> employees e
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> employees m  <span class="kw">ON</span> m.employeeID  = e.managerID
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> employees mm <span class="kw">ON</span> mm.employeeID = m.managerID
+<span class="kw">WHERE</span> e.branch &lt;&gt; <span class="str">'Yerevan Center'</span>;</div><table class="cmp compact tight" style="margin-top:10px;"><thead><tr><th>employee</th><th>manager</th><th>managers_manager</th></tr></thead><tbody><tr><td>Hayk</td><td>Vahe</td><td></td></tr><tr><td>Marine</td><td>Vahe</td><td></td></tr><tr><td>Nare</td><td>Hayk</td><td>Vahe</td></tr><tr><td>Lilit</td><td>Hayk</td><td>Vahe</td></tr><tr><td>Arman</td><td>Marine</td><td>Vahe</td></tr></tbody></table></div><div class="col"><div class="code" style="font-size:14px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> m.firstName || <span class="str">' '</span> || m.lastName <span class="kw">AS</span> manager,
+       <span class="fn">count</span>(e.employeeID) <span class="kw">AS</span> direct_reports
+<span class="kw">FROM</span> employees m
+<span class="kw">JOIN</span> employees e <span class="kw">ON</span> e.managerID = m.employeeID
+<span class="kw">GROUP</span> <span class="kw">BY</span> m.employeeID, m.firstName, m.lastName
+<span class="kw">ORDER</span> <span class="kw">BY</span> direct_reports <span class="kw">DESC</span>;</div><table class="cmp compact tight" style="margin-top:10px;"><thead><tr><th>manager</th><th>direct_reports</th></tr></thead><tbody><tr><td>Vahe Sahakyan</td><td>4</td></tr><tr><td>Hayk Melikyan</td><td>2</td></tr><tr><td>Marine Avagyan</td><td>1</td></tr></tbody></table></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 5 (5 rows; 3 rows)</footer>
+      <div class="notes"><b>Say</b> Manager's manager: 5 rows (the WHERE keeps the employees outside Yerevan Center). Report count: 3 rows — only people who manage someone appear, because this one is an inner join. 'All the way up, however many levels' would need one more join per level.</div>
+    </section>
+    <section class="slide slide--content" data-title="Names are not identifiers">
+      <div class="kicker">Part 4 &middot; Joining on the Wrong Thing</div>
+      <h1 class="title">Names are not identifiers</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col col--wide"><div class="code" style="font-size:15px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> c.firstName, c.lastName,
+       c.birthDate <span class="kw">AS</span> customer_born, e.birthDate <span class="kw">AS</span> employee_born
+<span class="kw">FROM</span> customers c
+<span class="kw">JOIN</span> employees e <span class="kw">ON</span> e.firstName = c.firstName
+                <span class="kw">AND</span> e.lastName  = c.lastName;</div><table class="cmp compact tight" style="margin-top:10px;"><thead><tr><th>name</th><th>customer_born</th><th>employee_born</th></tr></thead><tbody><tr><td>Hayk Melikyan</td><td>1993-03-30</td><td>1985-02-11</td></tr><tr><td>Lilit Hovhannisyan</td><td>1990-06-14</td><td>1998-07-07</td></tr></tbody></table></div><div class="col"><div class="bignum bad">2</div><div class="bignum-label">“matches” — four different people who share two names</div>
+        <div class="bignum bad" style="margin-top:18px;">637</div><div class="bignum-label">rows from joining <code style="font-family:var(--font-mono);">sales</code> to <code style="font-family:var(--font-mono);">customers</code> by name — not 600. Each Anna Sargsyan row matched both Annas.</div></div></div>
+        <div class="callout callout--red" style="margin-top:12px;"><b>One-line lesson</b>Only join on something guaranteed unique — a real key. Anything that merely “usually” identifies a row will eventually produce a false match, and the join won't warn you.</div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 5 (2 rows; 637); lecture-04-notes.md, Part 4.9</footer>
+      <div class="notes"><b>Say</b> These are the 2 'on both lists' from the FULL JOIN slide. The birth dates prove they're different people. Lecture 2 said it with two Annas: names are not keys. The honest answer to 'which employees also shop here?' is: this data can't tell.</div>
+    </section>
+    <section class="slide slide--statement" data-title="Fan-out: the number">
+      <div class="kicker">Part 4 &middot; The Fan-Out Trap</div>
+      <div class="stat-label">Total lifetime spend of our customers:</div>
+      <div class="stat" style="margin-top:10px;">4,079,958.38</div>
+      <div style="margin-top:18px; text-align:left;"><div class="code" style="font-size:17px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> <span class="fn">sum</span>(c.moneySpent) <span class="kw">AS</span> total_customer_spend
+<span class="kw">FROM</span> customers c
+<span class="kw">JOIN</span> orders o <span class="kw">ON</span> o.customerID = c.customerID;</div></div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 5 (4079958.38)</footer>
+      <div class="notes"><b>Say</b> Present it as if it were a real answer. Ask the room whether it looks plausible. It's a completely ordinary inner join — no outer join, no strange join type. That's why this is the most damaging trap: nothing about the query looks wrong. The real total, SELECT sum(moneySpent) FROM customers, is 145,935.12.</div>
+    </section>
+    <section class="slide slide--content" data-title="Fan-out: why">
+      <div class="kicker">Part 4 &middot; The Fan-Out Trap</div>
+      <h1 class="title">One customer value, copied onto every order row</h1>
+      
+      <div class="body-area">
+<div class="diagram"><svg viewBox="0 0 1136 250" width="1136" height="250"><rect x="10" y="80" width="250" height="70" rx="6" fill="#fff" stroke="#687F91" stroke-width="1.5"/><text x="135" y="108" font-family="Arial" font-weight="700" font-size="15" fill="#141517" text-anchor="middle">Aram Vardanyan</text><text x="135" y="132" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#4B5563" text-anchor="middle">moneySpent 13,544.72</text><text x="10" y="70" font-family="Arial" font-size="12" fill="#8A94A3">customers: 1 row</text><text x="400" y="18" font-family="Arial" font-size="12" fill="#8A94A3">after JOIN orders: 1 row per order</text><path d="M 260,115 L 400,48" stroke="#3D6D9E" stroke-width="1.5" fill="none"/><rect x="400" y="30" width="330" height="36" fill="#fff" stroke="#DCE3EA"/><text x="414" y="53" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">one of his orders   <tspan fill="#D93025" font-weight="700">13,544.72</tspan></text><path d="M 260,115 L 400,96" stroke="#3D6D9E" stroke-width="1.5" fill="none"/><rect x="400" y="78" width="330" height="36" fill="#fff" stroke="#DCE3EA"/><text x="414" y="101" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">one of his orders   <tspan fill="#D93025" font-weight="700">13,544.72</tspan></text><path d="M 260,115 L 400,144" stroke="#3D6D9E" stroke-width="1.5" fill="none"/><rect x="400" y="126" width="330" height="36" fill="#fff" stroke="#DCE3EA"/><text x="414" y="149" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">one of his orders   <tspan fill="#D93025" font-weight="700">13,544.72</tspan></text><path d="M 260,115 L 400,192" stroke="#3D6D9E" stroke-width="1.5" fill="none"/><rect x="400" y="174" width="330" height="36" fill="#fff" stroke="#DCE3EA"/><text x="414" y="197" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#141517">one of his orders   <tspan fill="#D93025" font-weight="700">13,544.72</tspan></text><text x="414" y="232" font-family="SFMono-Regular,Consolas,monospace" font-size="13" fill="#8A94A3">… 40 rows, 13,544.72 on every one</text><text x="780" y="110" font-family="Arial" font-size="15" fill="#4B5563">sum over his rows</text><text x="780" y="140" font-family="SFMono-Regular,Consolas,monospace" font-size="22" font-weight="700" fill="#D93025">= 541,788.80</text><text x="780" y="166" font-family="Arial" font-size="13" fill="#8A94A3">40 × 13,544.72, not 13,544.72</text></svg></div><ul class="points tight"><li><b>customers.moneySpent</b> is one number per customer — customer grain.</li>
+        <li><b>orders</b> has many rows per customer — order grain. The join copies moneySpent onto every one of them: not divided, not split, <b>copied whole</b>.</li></ul>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 5; customers.moneySpent and order counts from the lecture data (Aram Vardanyan: 40 orders)</footer>
+      <div class="notes"><b>Say</b> Aram placed 40 orders, so his 13,544.72 is summed 40 times. Do that for every customer and you get 4,079,958.38. This is Lecture 3's grain lesson again: after this join, the result has one row per order, not one per customer.</div>
+    </section>
+    <section class="slide slide--content" data-title="Fan-out: the proof">
+      <div class="kicker">Part 4 &middot; The Fan-Out Trap</div>
+      <h1 class="title">Count before you sum</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> <span class="fn">count</span>(*) <span class="kw">AS</span> rows,
+       <span class="fn">count</span>(<span class="kw">DISTINCT</span> c.customerID) <span class="kw">AS</span> customers
+<span class="kw">FROM</span> customers c
+<span class="kw">JOIN</span> orders o <span class="kw">ON</span> o.customerID = c.customerID;</div><div style="display:flex; gap:40px; margin-top:16px;"><div><div class="bignum bad">600</div><div class="bignum-label">rows summed</div></div>
+        <div><div class="bignum">28</div><div class="bignum-label">real customers with orders</div></div></div></div>
+        <div class="col"><div class="panel"><div class="panel__head blue">The fix, in general</div><div class="panel__body"><ul class="points tight">
+          <li>Aggregate the fine-grain table first, then join the <b>result</b> back — one row per customer.</li>
+          <li>Or don't join at all if you already have the summary value: <code style="font-family:var(--font-mono);">SELECT sum(moneySpent) FROM customers</code>.</li></ul></div></div></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 5 (600 / 28); lecture-04-notes.md, Part 4.10</footer>
+      <div class="notes"><b>Say</b> Every customer's moneySpent got summed once per order they placed, not once in total. 600 rows vs 28 customers is the tell. The two customers with no orders don't appear at all, because this is an inner join.</div>
+    </section>
+    <section class="slide slide--statement" data-title="Fan-out: the question to ask">
+      <div class="kicker">Part 4 &middot; The Fan-Out Trap</div>
+      <div class="big-line">“Is the thing I'm summing at the same grain as the rows I'm joining through?”</div>
+      <div class="stat-label" style="margin-top:20px; max-width:860px;">If not: am I about to sum the same value multiple times?</div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 4.10</footer>
+      <div class="notes"><b>Say</b> Ask it every time you aggregate after a join. It's the grain from Part 2, applied to a query instead of a schema.</div>
+    </section>
+    <section class="slide slide--content" data-title="ON with a range condition">
+      <div class="kicker">Part 4 &middot; Non-Equality Joins</div>
+      <h1 class="title">ON isn't limited to =</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col col--wide"><div class="code" style="font-size:14px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> b.band, <span class="fn">count</span>(*) <span class="kw">AS</span> orders, <span class="fn">sum</span>(o.orderTotal) <span class="kw">AS</span> revenue
+<span class="kw">FROM</span> orders o
+<span class="kw">JOIN</span> (<span class="kw">VALUES</span> (<span class="str">'1. under 50'</span>,  <span class="num">0</span>,    <span class="num">50</span>),
+             (<span class="str">'2. 50 - 299'</span>,  <span class="num">50</span>,   <span class="num">300</span>),
+             (<span class="str">'3. 300 - 999'</span>, <span class="num">300</span>,  <span class="num">1000</span>),
+             (<span class="str">'4. 1000+'</span>,     <span class="num">1000</span>, <span class="num">100000</span>)) <span class="kw">AS</span> b(band, low, high)
+  <span class="kw">ON</span> o.orderTotal &gt;= b.low <span class="kw">AND</span> o.orderTotal &lt; b.high
+<span class="kw">WHERE</span> o.status = <span class="str">'completed'</span>
+<span class="kw">GROUP</span> <span class="kw">BY</span> b.band <span class="kw">ORDER</span> <span class="kw">BY</span> b.band;</div></div><div class="col"><table class="cmp compact tight" style=""><thead><tr><th>band</th><th>orders</th><th>revenue</th></tr></thead><tbody><tr><td>1. under 50</td><td>149</td><td>3486.93</td></tr><tr><td>2. 50 - 299</td><td>235</td><td>33852.39</td></tr><tr><td>3. 300 - 999</td><td>113</td><td>62525.00</td></tr><tr><td>4. 1000+</td><td>32</td><td>46070.80</td></tr></tbody></table><p style="margin-top:14px; font:16px/1.5 var(--font-sans); color:var(--ink-soft);">Bucketing done natively in SQL: each order lands in the band where <code style="font-family:var(--font-mono);">low &lt;= orderTotal &lt; high</code> — no CASE per row.</p></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 5 (price-band query)</footer>
+      <div class="notes"><b>Say</b> VALUES builds a small table inline. The condition is a range, not key = key — the same machinery: every combination, keep the pairs that pass. Tax brackets and commission tiers are joins like this.</div>
+    </section>
+    <section class="slide slide--statement" data-title="A document is a join you saved">
+      <div class="kicker">Part 4 &middot; Bridge</div>
+      <div class="big-line">A document is a join <em>you saved</em>.</div>
+      <div class="stat-label" style="margin-top:20px; max-width:900px;">A denormalized JSON document is the materialized result of a one-to-many join. The relational model keeps the pieces separate and joins on demand; the document model pre-joins once and stores the result. Same information — different point where the join cost gets paid.</div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 4.12; lecture-04-demo.sql, Part 5 (jsonb_agg query)</footer>
+      <div class="notes"><b>Say</b> The demo builds one JSON document per customer with jsonb_agg: all of Diana's orders nested inside her customer object. Reading it back is fast; keeping it right when Diana moves city is the application's problem.</div>
+    </section>
+    <section class="slide slide--content" data-title="Proving the split was lossless">
+      <div class="kicker">Part 4 &middot; Losslessness</div>
+      <h1 class="title">A runnable proof that nothing was lost</h1>
+      
+      <div class="body-area">
+<div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">SELECT</span> o.orderID, o.orderDate, o.orderTime, …, p.brand, p.price, p.cost
+<span class="kw">FROM</span> orders o
+<span class="kw">JOIN</span>      customers c <span class="kw">ON</span> c.customerID = o.customerID
+<span class="kw">JOIN</span>      products  p <span class="kw">ON</span> p.productID  = o.productID
+<span class="kw">LEFT</span> <span class="kw">JOIN</span> employees e <span class="kw">ON</span> e.employeeID = o.employeeID
+<span class="kw">EXCEPT</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> sales;</div><div style="display:flex; gap:48px; align-items:flex-start; margin-top:16px;"><div><div class="bignum good">0 rows</div><div class="bignum-label">in both directions</div></div>
+        <p style="flex:1; font:17px/1.5 var(--font-sans); color:var(--ink-soft); margin:0;">Rebuild the flat file from the four tables, subtract the original: nothing left over. Swap the two halves: nothing again. That's <b>lossless-join decomposition</b> — as a query you can run, not a theory term.</p></div>
+      </div>
+      <footer class="tag">Source: lecture-04-demo.sql, Part 4 (0 rows); PostgreSQL 16 docs, “Select Lists” (NULLs equal for DISTINCT)</footer>
+      <div class="notes"><b>Say</b> The full SELECT lists all 29 columns of sales; the slide abbreviates it. The LEFT JOIN to employees matters, or the web shop is lost. EXCEPT compares whole rows and treats two NULLs as equal (the manual states that rule for DISTINCT; the 0-row result shows EXCEPT does the same).</div>
+    </section>
+    <section class="slide slide--content" data-title="GROUP BY column order">
+      <div class="kicker">Part 4 &middot; Myth</div>
+      <h1 class="title">GROUP BY a, b = GROUP BY b, a</h1>
+      
+      <div class="body-area">
+<div class="cols"><div class="col"><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">GROUP</span> <span class="kw">BY</span> c.customerID, c.firstName, c.lastName</div><div style="height:10px;"></div><div class="code" style="font-size:16px; line-height:1.55; padding:18px 24px;"><span class="kw">GROUP</span> <span class="kw">BY</span> c.lastName, c.firstName, c.customerID</div><div class="result">→ the same groups, the same totals</div></div>
+        <div class="col"><ul class="points">
+          <li>A group is defined by the <b>combination</b> of values in the listed columns. The order you list them in changes nothing.</li>
+          <li>If a total looks wrong, GROUP BY order is not the place to look — check for a <b>fan-out</b> first.</li></ul></div></div>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 4.14; PostgreSQL 16 docs, “Table Expressions: GROUP BY”</footer>
+      <div class="notes"><b>Say</b> PostgreSQL's definition: GROUP BY groups together the rows that have the same values in all the columns listed. 'All the columns listed' is a set, not a sequence. (The order of output rows is decided by ORDER BY, not GROUP BY.)</div>
+    </section>
+    <section class="slide slide--statement" data-title="Three silent traps, one root cause">
+      <div class="kicker">The One Idea to Leave With</div>
+      <div class="big-line" style="font-size:34px;">NATURAL JOIN <em>600 → 97</em> · WHERE vs. ON <em>13 → 12</em> · fan-out <em>→ 4,079,958.38</em></div>
+      <div class="stat-label" style="margin-top:24px; max-width:900px;">None of them threw an error. All three returned a table that looked completely normal. <b>SQL correctness bugs are almost always silent</b> — and an AI assistant will write a plausible, syntactically perfect join whether the logic is right or not.</div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 5</footer>
+      <div class="notes"><b>Say</b> Nothing turns red. The query runs, returns rows, and is simply wrong. That's the whole point of this lecture.</div>
+    </section>
+    <section class="slide slide--content" data-title="Checks to run after any join">
+      <div class="kicker">Takeaway</div>
+      <h1 class="title">The checks that catch a wrong-but-plausible answer</h1>
+      
+      <div class="body-area">
+<table class="vocab"><thead><tr><th style="width:360px;">Check</th><th>Catches</th></tr></thead><tbody>
+          <tr><td class="term">row count before / after</td><td>an inner join dropping rows (600 → 419); a join multiplying them (600 → 637)</td></tr>
+          <tr><td class="term">count(*) vs count(col)</td><td>empty matches after an outer join (Levon: 1 vs 0)</td></tr>
+          <tr><td class="term">count(DISTINCT key)</td><td>fan-out: 600 rows but only 28 customers</td></tr>
+          <tr><td class="term">symmetric difference</td><td>anything lost or invented: EXCEPT both ways against a known-correct source → 0 rows</td></tr>
+        </tbody></table>
+        <div class="callout callout--green" style="margin-top:18px;"><b>Not a side skill</b>For anyone using AI to write SQL, this is the actual skill.</div>
+      </div>
+      <footer class="tag">Source: lecture-04-notes.md, Part 5; numbers from lecture-04-demo.sql, Parts 4–5</footer>
+      <div class="notes"><b>Say</b> Each check is independent of the query it tests, which is what makes it a check. Run them every time, before trusting anything downstream.</div>
+    </section>
+    <section class="slide slide--content" data-title="Next lecture">
+      <div class="kicker">Next Lecture</div>
+      <h1 class="title">Queries inside queries</h1>
+      
+      <div class="body-area">
+<ul class="points">
+          <li>The fan-out fix — “aggregate first, then join the result” — needs a query inside a query.</li>
+          <li><b>Subqueries</b>, and saving a query under a name so everyone asks the same question the same way.</li>
+        </ul>
+      </div>
+      
+      <div class="notes"><b>Say</b> Good place to stop and take questions.</div>
+    </section>
+    <section class="slide slide--content" data-title="Sources">
+      <div class="kicker">Sources</div>
+      <h1 class="title">Where every claim comes from</h1>
+      
+      <div class="body-area">
+<ol class="refs">
+          <li>lecture-04-notes.md and lecture-04-demo.sql — every number on these slides is the demo's verified output.</li>
+          <li>PostgreSQL 16 documentation: “Table Expressions” (Joined Tables, GROUP BY), CREATE TABLE, “Comparison Functions”, “Aggregate Functions”, “Select Lists”, “Planner/Optimizer”. postgresql.org/docs/16</li>
+          <li>Kimball Group, Dimensional Modeling Techniques: “Star Schemas and OLAP Cubes”, “Grain”, “Calendar Date Dimensions”, “Nulls in Fact Tables”, “Snowflaked Dimensions”. kimballgroup.com</li>
+          <li>Kimball Group, Design Tip #105, “Snowflakes, Outriggers, and Bridges” (2008). kimballgroup.com/2008/09/design-tip-105-snowflakes-outriggers-and-bridges</li>
+          <li>Wikipedia: “Data model”, “Star schema”, “Snowflake schema”, “Snowflake Inc.”</li>
+          <li>Lecture 2 notes (ER diagrams, normal forms, ALTER TABLE) and Lecture 3 notes (grain).</li>
+        </ol>
+      </div>
+      
+      <div class="notes"><b>Say</b> Hand this slide out with the deck.</div>
+    </section>
+
+  </div>
+</div>
+
+<div class="chrome"><div class="chrome__bar" id="bar"></div></div>
+<div class="counter" id="counter">1 / 1</div>
+<div class="deckname">Lecture 4 &middot; Putting the Tables Back Together</div>
+<div class="notes-bar" id="notesBar"><b>Speaker note</b><div id="notesText"></div></div>
+<div class="overview" id="overview"><div class="overview__grid" id="overviewGrid"></div></div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  let idx = 0;
+  const bar = document.getElementById('bar');
+  const counter = document.getElementById('counter');
+  const notesBar = document.getElementById('notesBar');
+  const notesText = document.getElementById('notesText');
+  const overview = document.getElementById('overview');
+  const overviewGrid = document.getElementById('overviewGrid');
+
+  if(location.hash){
+    const n = parseInt(location.hash.replace('#',''),10);
+    if(!isNaN(n)) idx = Math.max(0, Math.min(slides.length-1, n-1));
+  }
+  function render(){
+    slides.forEach((s,i)=> s.classList.toggle('active', i===idx));
+    bar.style.width = ((idx+1)/slides.length*100)+'%';
+    counter.textContent = (idx+1)+' / '+slides.length;
+    const note = slides[idx].querySelector('.notes');
+    notesText.innerHTML = note ? note.innerHTML : '(no notes for this slide)';
+    history.replaceState(null, '', '#'+(idx+1));
+  }
+  function go(n){ idx = Math.max(0, Math.min(slides.length-1, n)); render(); }
+
+  function scale(){
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const s = Math.min(vw/1280, vh/720) * 0.96;
+    document.querySelectorAll('.slide').forEach(sl=> sl.style.setProperty('--s', s));
+  }
+  window.addEventListener('resize', scale);
+  scale();
+
+  window.addEventListener('keydown', (e)=>{
+    if(overview.classList.contains('show')){
+      if(e.key==='Escape' || e.key==='o' || e.key==='O'){ overview.classList.remove('show'); }
+      return;
+    }
+    if(e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ go(idx+1); e.preventDefault(); }
+    else if(e.key==='ArrowLeft' || e.key==='PageUp'){ go(idx-1); e.preventDefault(); }
+    else if(e.key==='Home'){ go(0); }
+    else if(e.key==='End'){ go(slides.length-1); }
+    else if(e.key==='s' || e.key==='S'){ notesBar.classList.toggle('show'); }
+    else if(e.key==='f' || e.key==='F'){ document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+    else if(e.key==='o' || e.key==='O'){ buildOverview(); overview.classList.add('show'); }
+  });
+
+  // click / tap: right half forward, left half back
+  document.getElementById('deck').addEventListener('click', (e)=>{
+    if(overview.classList.contains('show')) return;
+    if(e.clientX > window.innerWidth/2) go(idx+1); else go(idx-1);
+  });
+
+  function buildOverview(){
+    overviewGrid.innerHTML = '';
+    slides.forEach((s,i)=>{
+      const d = document.createElement('div');
+      d.className = 'overview__item';
+      d.innerHTML = '<span>'+(i+1)+'</span>' + (s.dataset.title || '');
+      d.addEventListener('click', (ev)=>{ ev.stopPropagation(); go(i); overview.classList.remove('show'); });
+      overviewGrid.appendChild(d);
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

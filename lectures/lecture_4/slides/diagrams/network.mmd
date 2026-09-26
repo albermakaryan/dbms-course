@@ -1,0 +1,8 @@
+flowchart LR
+    O1["order 1001"] -- pointer --> D["Davit<br/>customer"]
+    O2["order 1002"] -- pointer --> S["Samvel<br/>customer"]
+    O1 -- pointer --> A["AirPods Pro<br/>one record"]
+    O2 -- pointer --> A
+    classDef one fill:#15261A,stroke:#7EE787,color:#7EE787,stroke-width:3px
+    class A one
+    linkStyle default stroke:#79C0FF,stroke-width:3px

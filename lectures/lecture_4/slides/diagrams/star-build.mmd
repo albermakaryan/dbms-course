@@ -1,0 +1,25 @@
+flowchart TB
+    subgraph N["normalized · the truth"]
+        direction TB
+        c["customers · 30"]
+        e["employees · 8"]
+        p["products · 37"]
+        o["orders · 600"]
+    end
+    subgraph S["star · a rebuilt copy"]
+        direction TB
+        f["fact_sales · 600<br/>one row per order"]
+        dd["dim_date · 366"]
+        dc["dim_customer · 30"]
+        dp["dim_product · 37"]
+        de["dim_employee · 8 + 1<br/>key 0 = Online"]
+        dd --- f
+        dc --- f
+        dp --- f
+        de --- f
+    end
+    N -- "CREATE TABLE … AS SELECT" --> S
+    classDef fact fill:#2A2415,stroke:#F2CC60,color:#F2CC60,stroke-width:3px
+    classDef online fill:#161B22,stroke:#F2CC60,color:#E6EDF3,stroke-width:3px
+    class f fact
+    class de online
