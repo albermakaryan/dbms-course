@@ -9,25 +9,28 @@
 
 
 -- ---- 1. Revenue per city and category, grouped city first ----
-SELECT c.city, p.category, sum(o.orderTotal) AS revenue
+SELECT c.city, p.category, sum(i.lineTotal) AS revenue
 FROM orders o
-JOIN customers c ON c.customerID = o.customerID
-JOIN products  p ON p.productID  = o.productID
+JOIN customers   c ON c.customerID = o.customerID
+JOIN order_items i ON i.orderID    = o.orderID
+JOIN products    p ON p.productID  = i.productID
 GROUP BY c.city, p.category
 ORDER BY c.city, p.category;
 
 
 -- ---- 2. Prove it: subtract the category-first version ----
-SELECT c.city, p.category, sum(o.orderTotal) AS revenue
+SELECT c.city, p.category, sum(i.lineTotal) AS revenue
 FROM orders o
-JOIN customers c ON c.customerID = o.customerID
-JOIN products  p ON p.productID  = o.productID
+JOIN customers   c ON c.customerID = o.customerID
+JOIN order_items i ON i.orderID    = o.orderID
+JOIN products    p ON p.productID  = i.productID
 GROUP BY c.city, p.category
 EXCEPT
-SELECT c.city, p.category, sum(o.orderTotal) AS revenue
+SELECT c.city, p.category, sum(i.lineTotal) AS revenue
 FROM orders o
-JOIN customers c ON c.customerID = o.customerID
-JOIN products  p ON p.productID  = o.productID
+JOIN customers   c ON c.customerID = o.customerID
+JOIN order_items i ON i.orderID    = o.orderID
+JOIN products    p ON p.productID  = i.productID
 GROUP BY p.category, c.city;
 -- An empty result means: the same groups, the same totals.
 -- (The same EXCEPT trick as step 14 — a check you can reuse anywhere.)

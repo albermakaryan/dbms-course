@@ -261,7 +261,7 @@ def lab(x, y, t, anchor="start", color=FAINT, size=20):
 
 def star_svg():
     W, H = 1664, 600
-    fact, fb = entity(632, 150, 400, "fact_sales", [("PK", "orderID"), ("FK", "dateKey"), ("FK", "customerKey"), ("FK", "productKey"),
+    fact, fb = entity(632, 150, 400, "fact_sales", [("PK", "orderID"), ("PK", "productKey"), ("FK", "dateKey"), ("FK", "customerKey"),
                                                     ("FK", "employeeKey"), ("", "quantity · revenue · cost")], accent=True)
     parts = [
         link([(440, 90), (536, 90), (536, 250), (632, 250)]), bar1(450, 90), crow(632, 250, "left"),
@@ -274,11 +274,11 @@ def star_svg():
          entity(40, 420, 400, "dim_customer", [("PK", "customerKey"), ("", "customerName · city"), ("", "signupYear")])[0],
          entity(1224, 40, 400, "dim_product", [("PK", "productKey"), ("", "productName · brand"), ("", "category")])[0],
          entity(1224, 420, 400, "dim_employee", [("PK", "employeeKey"), ("", "employeeName · branch"), ("", "managerName")])[0]]
-    return svg(W, H, "".join(parts) + "".join(d) + fact + lab(632, fb + 36, "grain: one row per order · 600 rows", color=AMBER))
+    return svg(W, H, "".join(parts) + "".join(d) + fact + lab(632, fb + 36, "grain: one row per order line · 965 rows", color=AMBER))
 
 def snowflake_svg():
     W, H = 1664, 600
-    fact, fb = entity(470, 150, 360, "fact_sales", [("PK", "orderID"), ("FK", "dateKey"), ("FK", "customerKey"), ("FK", "productKey"),
+    fact, fb = entity(470, 150, 360, "fact_sales", [("PK", "orderID"), ("PK", "productKey"), ("FK", "dateKey"), ("FK", "customerKey"),
                                                     ("FK", "employeeKey"), ("", "revenue · cost")], accent=True)
     parts = [
         link([(360, 90), (415, 90), (415, 250), (470, 250)]), bar1(370, 90), crow(470, 250, "left"),
@@ -353,17 +353,17 @@ def orgchart(width=820):
 def fanout_svg():
     s = [f'<rect x="10" y="130" width="360" height="100" rx="8" fill="{SURF}" stroke="{LINE}" stroke-width="2"/>',
          f'<text x="190" y="172" font-family="{M}" font-weight="600" font-size="24" fill="{FG}" text-anchor="middle">Aram Vardanyan</text>',
-         f'<text x="190" y="206" font-family="{M}" font-size="20" fill="{AMBER}" text-anchor="middle">moneySpent 13,544.72</text>',
+         f'<text x="190" y="206" font-family="{M}" font-size="20" fill="{AMBER}" text-anchor="middle">moneySpent 14,625.38</text>',
          lab(10, 115, "customers: 1 row"), lab(580, 22, "after JOIN orders: 1 row per order")]
     for k in range(4):
         y = 40 + k * 72
         s.append(f'<path d="M 370,180 L 580,{y+26}" stroke="{FAINT}" stroke-width="2" fill="none"/>')
         s.append(f'<rect x="580" y="{y}" width="480" height="52" rx="6" fill="{SURF}" stroke="{LINE}" stroke-width="2"/>')
-        s.append(f'<text x="602" y="{y+34}" font-family="{M}" font-size="20" fill="{SOFT}">one of his orders   <tspan fill="{RED}" font-weight="600">13,544.72</tspan></text>')
-    s.append(f'<text x="602" y="345" font-family="{M}" font-size="20" fill="{FAINT}">… 40 rows, 13,544.72 on every one</text>')
+        s.append(f'<text x="602" y="{y+34}" font-family="{M}" font-size="20" fill="{SOFT}">one of his orders   <tspan fill="{RED}" font-weight="600">14,625.38</tspan></text>')
+    s.append(f'<text x="602" y="345" font-family="{M}" font-size="20" fill="{FAINT}">… 40 rows, 14,625.38 on every one</text>')
     s.append(lab(1140, 150, "sum over his rows", size=24, color=SOFT))
-    s.append(f'<text x="1140" y="196" font-family="{M}" font-weight="600" font-size="36" fill="{RED}">= 541,788.80</text>')
-    s.append(lab(1140, 232, "40 × 13,544.72, not 13,544.72", size=20))
+    s.append(f'<text x="1140" y="196" font-family="{M}" font-weight="600" font-size="36" fill="{RED}">= 585,015.20</text>')
+    s.append(lab(1140, 232, "40 × 14,625.38, not 14,625.38", size=20))
     return svg(1664, 370, "".join(s))
 
 def cost_svg():
@@ -389,28 +389,29 @@ slides.append(f'''<section class="slide cover" data-title="Title">
     <p class="mono" style="font-size:36px; margin-top:28px;">data models · dimensional modeling · star &amp; snowflake · JOIN</p>
   </div>
   <div style="display:flex; justify-content:space-between;"><p class="mono" style="font-size:24px; color:{FAINT};">Introduction to Databases &amp; SQL · Lecture 4</p><p class="mono" style="font-size:24px; color:{FAINT};">YSU · Data Science for Business</p></div>
-  {notes("Last time we took one table apart question by question. Today we put four tables back together, and build a second, analytical schema on top. Setup: createdb lecture04; psql lecture04; \\i steps/00-setup.sql from the lecture_4 folder. Expect 600 / 30 / 8 / 37 / 600.")}
+  {notes("Last time we took one table apart question by question. Today we put four tables back together, and build a second, analytical schema on top. Setup: from the lecture_4 folder: psql postgres, then \\i steps/00-setup.sql (it creates and connects to lecture04). Expect 965 / 30 / 8 / 37 / 600 / 965 (sales, customers, employees, products, orders, order_items).")}
 </section>''')
 
 slide("Plan", "today", "Four parts, one running example",
     col(key("01", "three levels of a data model", 120), key("02", "dimensional modeling: facts, dimensions, grain", 120),
         key("03", "star vs. snowflake schema", 120), key("04", "JOINs, built from one idea — most of today", 120), gap=34)
-    + ruled("Same shop, same data as Lecture 3: 600 orders, 30 customers, 8 employees, 37 products.", "green"),
+    + ruled("Same shop as Lecture 3, but an order can hold several products: 600 orders with 965 lines, 30 customers, 8 employees, 37 products.", "green"),
     note="Part 4 is the long one. Parts 1–3 give the vocabulary; Part 4 is the skill.",
     source=f"{N}, scope line (600 / 30 / 8 / 37 / 600)")
 
 slide("Where we left off", "where we left off", "We split one wide table into four",
     col(key("lecture 2", "split the flat sales file into four tables — one fact in one place", 280),
         key("lecture 3", "asked questions of one table at a time", 280),
-        key("today", "put the four back together with JOIN, and build a second, analytical schema on top", 280), gap=40)
-    + ruled("customers · employees · products · orders", "faint"),
+        key("new", "an order can now hold several products: orders is the header, order_items holds one row per product in an order", 280),
+        key("today", "put the tables back together with JOIN, and build a second, analytical schema on top", 280), gap=40)
+    + ruled("customers · employees · products · orders · order_items", "faint"),
     note="Everything today is either putting tables together (JOIN) or deciding what shape the tables should have in the first place.",
     source="Lecture 2 and Lecture 3 notes")
 
 # ---- Part 1 ----
 slide("Three levels", "01 · data models", "Conceptual → logical → physical",
     row(box("conceptual", P("<b>Entities and relationships.</b> No tables yet.") +
-            P("“A customer places orders. An order is for one product. An employee may serve an order — or nobody does, if it’s online.”")),
+            P("“A customer places orders. An order holds one or more products. An employee may serve an order — or nobody does, if it’s online.”")),
         box("logical", P("<b>Tables, columns, keys, constraints.</b> Still DBMS-agnostic.") +
             P("<code>orders.customerID</code> — required foreign key<br><code>orders.employeeID</code> — optional")),
         box("physical", P("<b>How one engine stores it.</b>") +
@@ -428,15 +429,15 @@ slide("Cost of a mistake", "01 · data models", "The further right, the more a c
 slide("Fact vs. dimension", "02 · dimensional modeling", "Facts are events. Dimensions are their context.",
     tbl(["", "fact table", "dimension table"],
         [["holds", "an event, with numbers attached", "the context: who, what, where, when"],
-         ["one row per", "thing that occurred — one order", "customer, product, employee, day"],
+         ["one row per", "thing that occurred — one order line", "customer, product, employee, day"],
          ["in the demo", c("fact_sales", AMBER), c("dim_date · dim_customer · dim_product · dim_employee", GREEN)],
          ["columns", "quantity, revenue, cost + a key per dimension", "names, city, category, quarter"]], sans=True)
     + P("A second, purpose-built schema you build <b>alongside</b> the normal tables — when the question shifts from “record what happened” to “summarize everything so far.”"),
     note="The fact table is narrow and long: numbers plus keys. The dimensions are wide and short: labels. You add up facts; you group and filter by dimensions.",
     source=f"{N}, Part 2; Kimball Group, “Star Schemas and OLAP Cubes”; Wikipedia, “Star schema”")
 
-statement("Grain", "02 · grain", "“One row = one order.”",
-    sub="The <b>grain</b> is the one-sentence definition of what a single fact row <i>is</i> — decided <b>before</b> anything else. Get it wrong (one row per line item, by accident) and every aggregate on top silently means something else.",
+statement("Grain", "02 · grain", "“One row = one order line.”",
+    sub="The <b>grain</b> is the one-sentence definition of what a single fact row <i>is</i> — decided <b>before</b> anything else. Get it wrong (an order’s total copied onto each of its lines, by accident) and every aggregate on top silently means something else.",
     note="Kimball calls declaring the grain 'the pivotal step in a dimensional design'. Everything else — which dimensions, which measures — has to agree with that sentence. Grain returns in Part 4 as the fan-out trap.",
     source=f"{N}, Part 2; Kimball Group, “Grain”")
 
@@ -466,7 +467,7 @@ VALUES (0, '(online)', 'Online', '(none)');"""),
                "row <b>0</b> gives them one — every fact row now has a valid, non-null employee key",
                "every join to <code>dim_employee</code> is ordinary, never a “what if it’s NULL” case"),
             ruled("Part 6 of the demo never needs LEFT JOIN against dim_employee. Plain inner joins lose nothing.", "green"))),
-    note="Why this avoids LEFT JOIN: an inner join drops a row only when it finds no partner. With the unknown member, every fact row's employeeKey (0 for online) matches a real dim_employee row, so the inner join keeps all 600. Compare Part 4: the same inner join against raw employees keeps 419 of 600. Kimball: avoid nulls in fact-table foreign keys; use a default dimension row.",
+    note="Why this avoids LEFT JOIN: an inner join drops a row only when it finds no partner. With the unknown member, every fact row's employeeKey (0 for online) matches a real dim_employee row, so the inner join keeps all 965 fact rows. Compare Part 4: the same inner join against raw employees keeps 419 of 600. Kimball: avoid nulls in fact-table foreign keys; use a default dimension row.",
     source=f"{D}, Part 6; {N}, Part 2; Kimball Group, “Nulls in Fact Tables”")
 
 # ---- Part 3 ----
@@ -545,17 +546,16 @@ slide("INNER JOIN", "04 · inner join", "INNER JOIN keeps only pairs that match"
         col(code("""SELECT count(*)
 FROM orders o
 JOIN customers c ON c.customerID = o.customerID
-JOIN products  p ON p.productID  = o.productID
 JOIN employees e ON e.employeeID = o.employeeID;""", 24),
             row(big("419", "rows, not 600", "blue"), big("181", "online orders gone: employeeID IS NULL matches nobody", "red"), gap=64)), extra="align-items:center;")
     + ruled("An inner join doesn’t complain when rows don’t match — it just quietly leaves them out.", "red"),
     note="Anything with no match simply disappears — no error, no placeholder. The Venn shows which rows survive, not how many rows come out: a join can also multiply rows (the fan-out trap later).",
     source=f"{D}, Part 4 (419); {N}, Part 4.2; PostgreSQL 16 docs, “Joined Tables”")
 
-statement("93,534.71", "04 · inner join", f'<span style="font-size:120px; color:{RED};">93,534.71</span>',
-    sub="“Completed revenue”, after joining employees to get the names. A real sum, correctly computed — over a silently incomplete set of rows. The real figure is <b>145,935.12</b>.",
+statement("100,222.48", "04 · inner join", f'<span style="font-size:120px; color:{RED};">100,222.48</span>',
+    sub="“Completed revenue”, after joining employees to get the names. A real sum, correctly computed — over a silently incomplete set of rows. The real figure is <b>157,078.41</b>.",
     note="Query: SELECT sum(o.orderTotal) FROM orders o JOIN employees e ON e.employeeID = o.employeeID WHERE o.status = 'completed'. Ask: what on screen would make you suspicious? Nothing — only knowing that online orders have no employee.",
-    source=f"{D}, Part 4 (93534.71); {N}, Part 4.2")
+    source=f"{D}, Part 4 (100222.48); {N}, Part 4.2")
 
 slide("Ambiguous column", "04 · aliasing", "Two tables, one column name: ambiguous",
     code("""SELECT orderID, customerID, firstName
@@ -584,10 +584,10 @@ JOIN customers c USING (customerID)
 WHERE o.orderID = 1001;""", 24),
             P("<b>USING (customerID)</b> = <code>ON o.customerID = c.customerID</code>, and the column appears once in the output.")),
         col(code("SELECT count(*)\nFROM orders NATURAL JOIN sales;", 24),
-            big("97", "rows — both tables hold the same 600 sales", "red")))
-    + ruled("NATURAL JOIN joined on all 12 shared column names — deliveryDate and rating among them. NULL = NULL is not true, so rows with a NULL there vanished. And it changes silently the day either table gains a matching column. Never use it in real code.", "red"),
-    note="The two tables share twelve column names; all twelve had to be equal. Only online orders that also got a rating survive: 97. The PostgreSQL manual calls NATURAL 'considerably more risky' than USING. Takeaway: the join condition should always be visible in the code you're reading.",
-    source=f"{D}, Part 3 (97); PostgreSQL 16 docs, “Joined Tables” and “Comparison Functions”")
+            big("168", "rows — an honest join on orderID gives 965", "red")))
+    + ruled("NATURAL JOIN joined on all 9 shared column names — deliveryDate and rating among them. NULL = NULL is not true, so rows with a NULL there vanished. And it changes silently the day either table gains a matching column. Never use it in real code.", "red"),
+    note="The two tables share nine column names; all nine had to be equal. Only the lines of online orders that also got a rating survive: 168. The PostgreSQL manual calls NATURAL 'considerably more risky' than USING. Takeaway: the join condition should always be visible in the code you're reading.",
+    source=f"{D}, Part 3 (168); PostgreSQL 16 docs, “Joined Tables” and “Comparison Functions”")
 
 def outer(title, kind, heading, left, right, sql, extra, note, source):
     slide(title, "04 · outer joins", heading,
@@ -598,8 +598,8 @@ outer("LEFT JOIN", "left", "LEFT JOIN: keep every row on the left", "orders", "e
 FROM orders o
 LEFT JOIN employees e ON e.employeeID = o.employeeID;""",
     big("600", "rows — the 181 online orders survive, employee columns NULL", "green")
-    + P("Group by <code>coalesce(e.branch, 'Online')</code> and web revenue lands in a visible “Online” bucket: <b>52,400.41</b> — the largest of the four."),
-    "INNER JOIN, but we refuse to lose rows from the left. 'Left' is the table written before JOIN. Completed revenue per branch: Online 52,400.41; Yerevan Center 48,113.04; Yerevan Mall 35,934.64; Gyumri 9,487.03.",
+    + P("Group by <code>coalesce(e.branch, 'Online')</code> and web revenue lands in a visible “Online” bucket: <b>56,855.93</b> — the largest of the four."),
+    "INNER JOIN, but we refuse to lose rows from the left. 'Left' is the table written before JOIN. Completed revenue per branch: Online 56,855.93; Yerevan Center 51,758.15; Yerevan Mall 38,008.16; Gyumri 10,456.17.",
     f"{D}, Part 4 (600; revenue per branch); PostgreSQL 16 docs, “Joined Tables”")
 
 outer("RIGHT JOIN", "right", "RIGHT JOIN: the mirror image", "orders", "customers", """SELECT count(*)
@@ -663,14 +663,15 @@ slide("WHERE vs ON: the rule", "04 · the most important trap", "WHERE vs. ON: i
     source=f"{N}, Part 4.7; PostgreSQL 16 docs, “Joined Tables” (ON vs. WHERE)")
 
 slide("WHERE version", "04 · where vs on · 1", "Filter in WHERE → 12 rows, Chairs gone",
-    row(code("""SELECT p.category, count(o.orderID) AS orders,
-       sum(o.orderTotal) AS revenue
+    row(code("""SELECT p.category, count(i.orderID) AS lines,
+       sum(i.lineTotal) AS revenue
 FROM products p
-LEFT JOIN orders o ON o.productID = p.productID
+LEFT JOIN order_items i ON i.productID = p.productID
+LEFT JOIN orders      o ON o.orderID   = i.orderID
 WHERE o.status = 'completed'
 GROUP BY p.category
 ORDER BY revenue DESC NULLS LAST;""", 24, "flex:0 0 900px;"),
-        col(tbl(["category", "orders", "revenue"], [["Laptops", "46", "53412.00"], ["Phones", "38", "25991.90"], ["…", "…", "…"], ["Networking", "17", "2225.75"], ["Cables", "77", "1651.17"]], nums=(1, 2)),
+        col(tbl(["category", "lines", "revenue"], [["Laptops", "46", "53412.00"], ["Phones", "38", "25991.90"], ["…", "…", "…"], ["Printers", "13", "2408.65"], ["Networking", "17", "2225.75"]], nums=(1, 2)),
             big("12 rows", "no Chairs row", "red"))),
     note="The LEFT JOIN runs first and keeps the Chair row with o.status NULL. Then WHERE runs: NULL = 'completed' is not true, and the Chair row is thrown out. No error. Middle rows omitted to fit.",
     source=f"{D}, Part 4 (12 rows)")
@@ -680,17 +681,19 @@ statement("ON invites, WHERE decides", "04 · where vs on", "<em>ON</em> decides
     note="Use this line verbatim. The NULL-padded Chair row was a guest the LEFT JOIN invited for free; the WHERE clause showed it the door.",
     source=f"{N}, Part 4.7")
 
-slide("ON version", "04 · where vs on · 2", "Same condition in ON → 13 rows, Chairs at 0",
-    row(code("""SELECT p.category, count(o.orderID) AS orders,
-       coalesce(sum(o.orderTotal), 0) AS revenue
+slide("ON version", "04 · where vs on · 2", "Decide the match first → 13 rows, Chairs at 0",
+    row(code("""SELECT p.category, count(i.orderID) AS lines,
+       coalesce(sum(i.lineTotal), 0) AS revenue
 FROM products p
-LEFT JOIN orders o ON o.productID = p.productID
-                  AND o.status = 'completed'
+LEFT JOIN (order_items i
+           JOIN orders o ON o.orderID = i.orderID
+                        AND o.status  = 'completed')
+       ON i.productID = p.productID
 GROUP BY p.category
 ORDER BY revenue DESC;""", 24, "flex:0 0 900px;"),
-        col(tbl(["category", "orders", "revenue"], [["Laptops", "46", "53412.00"], ["Phones", "38", "25991.90"], ["…", "…", "…"], ["Cables", "77", "1651.17"], [c("Chairs", GREEN), c("0", GREEN), c("0", GREEN)]], nums=(1, 2)),
+        col(tbl(["category", "lines", "revenue"], [["Laptops", "46", "53412.00"], ["Phones", "38", "25991.90"], ["…", "…", "…"], ["Networking", "17", "2225.75"], [c("Chairs", GREEN), c("0", GREEN), c("0", GREEN)]], nums=(1, 2)),
             big("13 rows", "Chairs present, revenue 0", "green"))),
-    note="Rule: conditions on the right table of a LEFT JOIN go in ON; conditions on the left table go in WHERE. coalesce turns the NULL sum into 0 (sum of no rows is NULL).",
+    note="In a chain of joins, ask which join the condition belongs to. Putting o.status = 'completed' in the ON of the orders join brings Chairs back but keeps every line of returned orders (they just get NULL order columns), so revenue is wrong: Laptops 58,028.50 instead of 53,412.00. The brackets build the match first — a line of a completed order — and the LEFT JOIN keeps every product. coalesce turns the NULL sum into 0 (sum of no rows is NULL).",
     source=f"{D}, Part 4 (13 rows); PostgreSQL 16 docs, “Aggregate Functions”")
 
 slide("Self-join", "04 · self-joins", "Self-join: one table, two roles",
@@ -733,23 +736,23 @@ JOIN employees e ON e.firstName = c.firstName
                 AND e.lastName  = c.lastName;""", 22),
             tbl(["name", "customer_born", "employee_born"], [["Hayk Melikyan", "1993-03-30", "1985-02-11"], ["Lilit Hovhannisyan", "1990-06-14", "1998-07-07"]], style="font-size:22px;")),
         col(big("2", "“matches” — four different people sharing two names", "red"),
-            big("637", "rows from joining sales to customers by name — not 600. Each Anna Sargsyan row matched both Annas.", "red"), extra="flex:0 0 560px;"))
+            big("1,036", "rows from joining sales to customers by name — not 965. Each Anna Sargsyan row matched both Annas.", "red"), extra="flex:0 0 560px;"))
     + ruled("Only join on something guaranteed unique — a real key. Anything that merely “usually” identifies a row will eventually produce a false match, and the join won’t warn you.", "red"),
     note="These are the 2 'on both lists' from the FULL JOIN slide; the birth dates prove they're different people. Lecture 2 said it with two Annas: names are not keys.",
-    source=f"{D}, Part 5 (2 rows; 637); {N}, Part 4.9")
+    source=f"{D}, Part 5 (2 rows; 1036); {N}, Part 4.9")
 
-statement("Fan-out: the number", "04 · the fan-out trap", f'<span style="font-size:48px; color:{SOFT};">Total lifetime spend of our customers:</span><br><span style="font-size:140px; color:{FG};">4,079,958.38</span>',
+statement("Fan-out: the number", "04 · the fan-out trap", f'<span style="font-size:48px; color:{SOFT};">Total lifetime spend of our customers:</span><br><span style="font-size:140px; color:{FG};">4,386,925.27</span>',
     sub=code("""SELECT sum(c.moneySpent) AS total_customer_spend
 FROM customers c
 JOIN orders o ON o.customerID = c.customerID;""", 26, "display:inline-block;"),
-    note="Present it as if it were a real answer. Ask whether it looks plausible. A completely ordinary inner join — no outer join, no strange join type. That's why it's the most damaging trap. The real total, sum(moneySpent) FROM customers, is 145,935.12.",
-    source=f"{D}, Part 5 (4079958.38)")
+    note="Present it as if it were a real answer. Ask whether it looks plausible. A completely ordinary inner join — no outer join, no strange join type. That's why it's the most damaging trap. The real total, sum(moneySpent) FROM customers, is 157,078.41.",
+    source=f"{D}, Part 5 (4386925.27)")
 
 slide("Fan-out: why", "04 · the fan-out trap", "One customer value, copied onto every order row",
     fanout_svg()
     + col(ul("<b>customers.moneySpent</b> is one number per customer — customer grain",
              "<b>orders</b> has many rows per customer — order grain; the join copies moneySpent onto every one: not divided, not split, <b>copied whole</b>"), gap=6),
-    note="Aram placed 40 orders, so his 13,544.72 is summed 40 times. Do that for every customer and you get 4,079,958.38. After this join the result has one row per order, not one per customer.",
+    note="Aram placed 40 orders, so his 14,625.38 is summed 40 times. Do that for every customer and you get 4,386,925.27. After this join the result has one row per order, not one per customer.",
     source=f"{D}, Part 5; customers.moneySpent and order counts (Aram Vardanyan: 40 orders)")
 
 slide("Fan-out: proof", "04 · the fan-out trap", "Count before you sum",
@@ -759,7 +762,7 @@ FROM customers c
 JOIN orders o ON o.customerID = c.customerID;""", 24),
             row(big("600", "rows summed", "red"), big("28", "real customers with orders", "blue"), gap=72)),
         f'<div style="flex:0 0 620px; display:flex;">' + box("the fix, in general", ul("aggregate the fine-grain table <b>first</b>, then join the result back — one row per customer",
-                                      "or don’t join at all if you already have the summary: <code>SELECT sum(moneySpent) FROM customers</code> → 145,935.12"), "amber") + "</div>"),
+                                      "or don’t join at all if you already have the summary: <code>SELECT sum(moneySpent) FROM customers</code> → 157,078.41"), "amber") + "</div>"),
     note="Every customer's moneySpent got summed once per order they placed. 600 rows vs 28 customers is the tell.",
     source=f"{D}, Part 5 (600 / 28); {N}, Part 4.10")
 
@@ -781,7 +784,7 @@ JOIN (VALUES ('1. under 50',  0,    50),
  AND o.orderTotal <  b.high
 WHERE o.status = 'completed'
 GROUP BY b.band ORDER BY b.band;""", 21, "flex:0 0 880px;"),
-        col(tbl(["band", "orders", "revenue"], [["1. under 50", "149", "3486.93"], ["2. 50 - 299", "235", "33852.39"], ["3. 300 - 999", "113", "62525.00"], ["4. 1000+", "32", "46070.80"]], nums=(1, 2), style="font-size:22px;"),
+        col(tbl(["band", "orders", "revenue"], [["1. under 50", "121", "3193.18"], ["2. 50 - 299", "251", "35595.33"], ["3. 300 - 999", "120", "66244.24"], ["4. 1000+", "37", "52045.66"]], nums=(1, 2), style="font-size:22px;"),
             P("Bucketing natively in SQL: each order lands in the band where <code>low &lt;= orderTotal &lt; high</code> — no CASE per row."))),
     note="VALUES builds a small table inline. The condition is a range, not key = key — same machinery: every combination, keep the pairs that pass.",
     source=f"{D}, Part 5 (price-band query)")
@@ -792,16 +795,17 @@ statement("A document is a join you saved", "04 · bridge", "A document is a joi
     source=f"{N}, Part 4.12; {D}, Part 5 (jsonb_agg query)")
 
 slide("Lossless", "04 · losslessness", "A runnable proof that nothing was lost",
-    code("""SELECT o.orderID, o.orderDate, o.orderTime, …, p.brand, p.price, p.cost
+    code("""SELECT o.orderID, o.orderDate, …, i.lineTotal, …, p.price, p.cost
 FROM orders o
-JOIN      customers c ON c.customerID = o.customerID
-JOIN      products  p ON p.productID  = o.productID
-LEFT JOIN employees e ON e.employeeID = o.employeeID
+JOIN      order_items i ON i.orderID    = o.orderID
+JOIN      customers   c ON c.customerID = o.customerID
+JOIN      products    p ON p.productID  = i.productID
+LEFT JOIN employees   e ON e.employeeID = o.employeeID
 EXCEPT
 SELECT * FROM sales;""", 24)
     + row(big("0 rows", "in both directions", "green"),
-          P("Rebuild the flat file from the four tables, subtract the original: nothing left over. Swap the halves: nothing again. That’s <b>lossless-join decomposition</b> — as a query you can run, not a theory term."), extra="align-items:flex-start;"),
-    note="The full SELECT lists all 29 columns of sales. The LEFT JOIN to employees matters, or the web shop is lost. EXCEPT treats two NULLs as equal (the manual states that rule for DISTINCT; the 0-row result shows EXCEPT does the same).",
+          P("Rebuild the flat file from the five tables, subtract the original: nothing left over. Swap the halves: nothing again. That’s <b>lossless-join decomposition</b> — as a query you can run, not a theory term."), extra="align-items:flex-start;"),
+    note="The full SELECT lists all 30 columns of sales. The LEFT JOIN to employees matters, or the web shop is lost. EXCEPT treats two NULLs as equal (the manual states that rule for DISTINCT; the 0-row result shows EXCEPT does the same).",
     source=f"{D}, Part 4 (0 rows); PostgreSQL 16 docs, “Select Lists”")
 
 slide("GROUP BY order", "04 · myth", "GROUP BY a, b  =  GROUP BY b, a",
@@ -814,14 +818,14 @@ slide("GROUP BY order", "04 · myth", "GROUP BY a, b  =  GROUP BY b, a",
 
 # ---- closing ----
 statement("Three silent traps", "the one idea to leave with",
-    f'NATURAL JOIN {c("600 → 97", RED)}<br>WHERE vs. ON {c("13 → 12", RED)}<br>fan-out {c("→ 4,079,958.38", RED)}',
+    f'NATURAL JOIN {c("965 → 168", RED)}<br>WHERE vs. ON {c("13 → 12", RED)}<br>fan-out {c("→ 4,386,925.27", RED)}',
     sub="None of them threw an error. All three returned a table that looked completely normal. <b>SQL correctness bugs are almost always silent</b> — and an AI assistant will write a plausible, syntactically perfect join whether the logic is right or not.",
     note="Nothing turns red. The query runs, returns rows, and is simply wrong. That's the whole point of this lecture.",
     source=f"{N}, Part 5")
 
 slide("Checks", "take this with you", "Checks that catch a wrong-but-plausible answer",
     tbl(["check", "catches"],
-        [[c("row count before / after", AMBER), "an inner join dropping rows (600 → 419); a join multiplying them (600 → 637)"],
+        [[c("row count before / after", AMBER), "an inner join dropping rows (600 → 419); a join multiplying them (965 → 1,036)"],
          [c("count(*) vs count(col)", AMBER), "empty matches after an outer join (Levon: 1 vs 0)"],
          [c("count(DISTINCT key)", AMBER), "fan-out: 600 rows but only 28 customers"],
          [c("symmetric difference", AMBER), "anything lost or invented: EXCEPT both ways → 0 rows"]])

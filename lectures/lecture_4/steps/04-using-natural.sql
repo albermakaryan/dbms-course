@@ -17,24 +17,27 @@ WHERE o.orderID = 1001;
 
 
 -- ---- 2. NATURAL JOIN: joins on every shared column name ----
--- orders and sales hold the same 600 sales. An honest one-to-one match
--- should give 600 rows. Guess first:
+-- sales is the flat file: one row per order LINE, with the order's
+-- columns copied onto each line. Joined honestly on orderID, every line
+-- finds its order:
+SELECT count(*) FROM orders o JOIN sales s ON s.orderID = o.orderID;
+-- Guess first: what does NATURAL JOIN give?
 SELECT count(*) FROM orders NATURAL JOIN sales;
 
 
--- ---- 3. Why 97? See which columns it silently joined on ----
+-- ---- 3. Why so few? See which columns it silently joined on ----
 -- NATURAL JOIN uses EVERY column name the two tables share:
 SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'
 INTERSECT
 SELECT column_name FROM information_schema.columns WHERE table_name = 'sales'
 ORDER BY 1;
--- All twelve had to be equal. deliveryDate is NULL for every in-store
+-- All nine had to be equal. deliveryDate is NULL for every in-store
 -- order, rating is NULL for many orders — and NULL = NULL is not true
--- (Lecture 3's NULL rule). Any row with a NULL in any of the twelve
--- is thrown out. The survivors are the online orders that also got a
--- rating:
+-- (Lecture 3's NULL rule). Any row with a NULL in any of the nine is
+-- thrown out. The survivors are the lines of online orders that also
+-- got a rating:
 SELECT count(*)
-FROM orders
+FROM sales
 WHERE deliveryDate IS NOT NULL
   AND rating IS NOT NULL;
 

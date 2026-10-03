@@ -18,10 +18,11 @@ WHERE o.orderID IS NULL;
 
 
 -- ---- 2. Products never ordered ----
+-- Products appear on order LINES, so the right-hand table is order_items.
 SELECT p.productID, p.productName, p.category, p.stockQuantity
 FROM products p
-LEFT JOIN orders o ON o.productID = p.productID
-WHERE o.orderID IS NULL;
+LEFT JOIN order_items i ON i.productID = p.productID
+WHERE i.orderID IS NULL;
 
 
 -- ---- 3. Why test the right table's KEY? ----

@@ -1,82 +1,53 @@
 -- ============================================================
--- Lecture 4 — Part 0: load the data
+-- Lecture 5 — Part 0: load the data
 --
--- The shop from Lecture 3, with one change: an order can hold SEVERAL
--- products, the way a real shopping cart does. Creates SIX tables:
+-- Lecture 4's shop, with one change: an order can now hold SEVERAL
+-- products, the way a real shopping cart does. Creates FIVE tables:
 --
 --   customers    \
---   employees     |  the people and the catalogue (employees gets a
---   products     /   managerID column: who each person reports to)
+--   employees     |  the same as Lecture 4 (employees with the same
+--   products     /   managerID reporting line)
 --   orders        one row per ORDER -- the header: who bought, when,
 --                 where, status, and the order's total. No product
---                 columns: products live on the lines.
+--                 columns any more.
 --   order_items   one row per PRODUCT IN AN ORDER -- the lines: which
 --                 product, how many, at what price. Primary key
 --                 (orderID, productID): a product appears once per order.
---   sales         the flat file: one row per order LINE, with the order,
---                 customer, employee and product written out on every
---                 row. The same facts as the five tables above, in one
---                 sheet.
 --
--- The data is Lecture 5's (copied into data/ by build_data.py, which
--- also writes the flat file). 235 of the 600 orders have more than one
--- line; 965 lines in all.
+-- The data comes from generate_data.py: every Lecture 4 order keeps its
+-- product as its first line, and 235 of the 600 orders got 1-3 more
+-- lines (965 lines in all). orderTotal is the sum of the order's lines,
+-- so totals and revenue are higher than in Lecture 4. Everything else
+-- you know still holds: 600 orders, Levon and Astghik never ordered,
+-- Ergonomic Chair Pro never sold, 181 online orders with no employee.
+-- (Lecture 4's flat sales table isn't needed and isn't loaded.)
 --
--- Creates the lecture04 database too, if it doesn't exist yet, and
--- connects to it -- so you can start psql in ANY database.
--- \copy resolves paths relative to where you STARTED psql, so run this
--- from the lecture_4/ folder:     psql postgres
---                                 \i steps/00-setup.sql
--- Safe to re-run: drops and recreates every table.
+-- Creates the lecture05 database too, if it doesn't exist yet, and
+-- connects to it -- so you can start psql in ANY database:
+--
+-- \copy resolves paths relative to where you STARTED psql, so run
+-- this from the lecture_5/ folder:    psql postgres
+--                                     \i steps/00-setup.sql
+-- Safe to re-run: drops and recreates every table, including Lecture
+-- 4's tables if they're in the same database.
 -- ============================================================
 
 -- ---- The database: create it only if it's missing ----
--- Postgres has no CREATE DATABASE IF NOT EXISTS. This SELECT produces
--- the text of a CREATE DATABASE statement only when lecture04 doesn't
--- exist, and \gexec runs whatever text the SELECT produced.
-SELECT 'CREATE DATABASE lecture04'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'lecture04')\gexec
+-- Postgres has no CREATE DATABASE IF NOT EXISTS. Instead, this SELECT
+-- produces the text of a CREATE DATABASE statement only when no
+-- database called lecture05 exists, and \gexec runs whatever text the
+-- SELECT produced: one statement the first time, nothing after that.
+-- SELECT 'CREATE DATABASE lecture05'
+-- WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'lecture05')\gexec
+DROP DATABASE IF EXISTS lecture05;
+CREATE DATABASE lecture05;
 
-\c lecture04
+\c lecture05
 
--- Also drops the star schema built in the demo's Part 6, so this stays
--- the reset button.
+-- Also drops Lecture 4's tables (sales, the star schema), in case
+-- you're reusing that database, so this stays the reset button.
 DROP TABLE IF EXISTS fact_sales, dim_date, dim_customer, dim_product, dim_employee,
                      order_items, sales, orders, customers, employees, products;
-
--- ---- The flat file: one wide table, one row per order line ----
-CREATE TABLE sales (
-    orderID              INT,
-    orderDate            DATE,
-    orderTime            TIME,
-    channel              VARCHAR(10),      -- in_store / online
-    status               VARCHAR(10),      -- completed / returned / cancelled
-    paymentMethod        VARCHAR(10),      -- cash / card / transfer
-    deliveryDate         DATE,             -- online orders only
-    rating               INT,              -- 1-5, when the customer bothered
-    orderTotal           DECIMAL(10,2),    -- the WHOLE order's total, repeated on each of its lines
-    quantity             INT,
-    unitPrice            DECIMAL(8,2),
-    discountPct          INT,
-    lineTotal            DECIMAL(10,2),    -- this line only
-    customerFirstName    VARCHAR(50),
-    customerLastName     VARCHAR(50),
-    customerEmail        VARCHAR(100),
-    customerCity         VARCHAR(50),
-    customerBirthDate    DATE,
-    customerSignupDate   DATE,
-    customerAnniversary  DATE,
-    customerMoneySpent   DECIMAL(10,2),
-    employeeFirstName    VARCHAR(50),      -- empty for online orders
-    employeeLastName     VARCHAR(50),
-    employeePosition     VARCHAR(30),
-    employeeBranch       VARCHAR(50),
-    productName          VARCHAR(100),
-    productCategory      VARCHAR(50),
-    productBrand         VARCHAR(50),
-    productPrice         DECIMAL(8,2),
-    productCost          DECIMAL(8,2)
-);
 
 CREATE TABLE customers (
     customerID   SERIAL PRIMARY KEY,
@@ -143,9 +114,8 @@ CREATE TABLE order_items (
 );
 
 -- ---- Load. Parents before children -- the foreign keys insist. ----
--- (CSV fallback: replace the six \copy lines with  \i data/all_inserts.sql)
+-- (CSV fallback: replace the five \copy lines with  \i data/all_inserts.sql)
 -- An empty field in a CSV (no anniversary, no employee, no rating) becomes NULL.
-\copy sales       FROM 'data/sales_flat.csv'  WITH (FORMAT csv, HEADER true)
 \copy customers   FROM 'data/customers.csv'   WITH (FORMAT csv, HEADER true)
 -- employees.csv has no managerID column, so name the columns it does have.
 \copy employees (employeeID, firstName, lastName, email, birthDate, hireDate, position, branch, salary) FROM 'data/employees.csv' WITH (FORMAT csv, HEADER true)
@@ -160,20 +130,21 @@ SELECT setval(pg_get_serial_sequence('customers', 'customerid'), (SELECT max(cus
 SELECT setval(pg_get_serial_sequence('employees', 'employeeid'), (SELECT max(employeeID) FROM employees));
 SELECT setval(pg_get_serial_sequence('products',  'productid'),  (SELECT max(productID)  FROM products));
 
--- ---- The reporting line ----
+-- ---- The reporting line (as in Lecture 4) ----
 -- Vahe runs the Yerevan Center store and everyone reports up to him.
 -- The two other branches have a Senior Sales lead in between.
 UPDATE employees SET managerID = 3 WHERE employeeID IN (1, 2, 5, 8);   -- Gor, Ani, Hayk, Marine -> Vahe
 UPDATE employees SET managerID = 5 WHERE employeeID IN (4, 6);         -- Nare, Lilit -> Hayk (Yerevan Mall)
 UPDATE employees SET managerID = 8 WHERE employeeID = 7;               -- Arman -> Marine (Gyumri)
 
--- Collect table statistics now instead of waiting for autovacuum, so
--- the planner sees the same numbers on every machine.
+-- Collect table statistics now instead of waiting for autovacuum. The
+-- planner picks join methods from these numbers, and Part 5.4 shows a
+-- result whose row ORDER depends on the join method -- with fresh
+-- statistics everyone gets the same plan, and the same wrong order.
 ANALYZE;
 
--- Expect 965 / 30 / 8 / 37 / 600 / 965
-SELECT 'sales' AS t, count(*) FROM sales
-UNION ALL SELECT 'customers',   count(*) FROM customers
+-- Expect 30 / 8 / 37 / 600 / 965
+SELECT 'customers' AS t, count(*) FROM customers
 UNION ALL SELECT 'employees',   count(*) FROM employees
 UNION ALL SELECT 'products',    count(*) FROM products
 UNION ALL SELECT 'orders',      count(*) FROM orders

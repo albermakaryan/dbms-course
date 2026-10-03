@@ -1,0 +1,12 @@
+[project]
+name = "dbms-course"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "marimo>=0.25.0",
+    "pandas>=3.0.6",
+    "polars>=1.44.2",
+    "psycopg>=3.3.6",
+]

@@ -18,40 +18,65 @@
 
 
 -- ---- 1. Revenue per category, including categories that sold nothing ----
-SELECT p.category, count(o.orderID) AS orders, sum(o.orderTotal) AS revenue
+-- Revenue lives on the lines (lineTotal), so go products -> lines.
+SELECT p.category, count(i.orderID) AS lines, sum(i.lineTotal) AS revenue
 FROM products p
-LEFT JOIN orders o ON o.productID = p.productID
+LEFT JOIN order_items i ON i.productID = p.productID
 GROUP BY p.category
 ORDER BY revenue DESC NULLS LAST;
 -- Look for Chairs: it never sold, but the LEFT JOIN keeps it.
 
 
 -- ---- 2. The boss adds "completed orders only". The obvious edit: ----
-SELECT p.category, count(o.orderID) AS orders, sum(o.orderTotal) AS revenue
+-- status lives on the order header, so join orders too, and filter:
+SELECT p.category, count(i.orderID) AS lines, sum(i.lineTotal) AS revenue
 FROM products p
-LEFT JOIN orders o ON o.productID = p.productID
+LEFT JOIN order_items i ON i.productID = p.productID
+LEFT JOIN orders      o ON o.orderID   = i.orderID
 WHERE o.status = 'completed'
 GROUP BY p.category
 ORDER BY revenue DESC NULLS LAST;
--- Walk the order: the LEFT JOIN runs first and keeps the Chair row,
+-- Walk the order: the LEFT JOINs run first and keep the Chair row,
 -- with o.status NULL. Then WHERE runs: NULL = 'completed' is not true,
 -- so the Chair row is thrown out along with the genuinely
 -- non-completed rows. The LEFT JOIN has quietly become an INNER JOIN.
 
 
--- ---- 3. Move the same condition into ON ----
-SELECT p.category, count(o.orderID) AS orders, coalesce(sum(o.orderTotal), 0) AS revenue
+-- ---- 3. Move the condition into ON — but which ON? ----
+-- First attempt: into the ON of the orders join.
+SELECT p.category, count(i.orderID) AS lines, coalesce(sum(i.lineTotal), 0) AS revenue
 FROM products p
-LEFT JOIN orders o ON o.productID = p.productID
-                  AND o.status = 'completed'
+LEFT JOIN order_items i ON i.productID = p.productID
+LEFT JOIN orders      o ON o.orderID   = i.orderID
+                       AND o.status    = 'completed'
 GROUP BY p.category
 ORDER BY revenue DESC;
--- Now the status test only decides which orders count as a MATCH.
--- The Chair has no completed match, so it is NULL-padded and kept.
+-- Chairs is back. But compare the revenue with query 2: it went UP.
+-- The status test now only decides whether a line finds its ORDER.
+-- A line of a returned order still exists — it just gets NULL order
+-- columns — and its lineTotal is still summed. This is part 1's
+-- all-orders revenue again, wearing a "completed" label.
+
+
+-- ---- 4. The fix: decide what counts as a match BEFORE the LEFT JOIN ----
+-- A product's match is "a line of a completed order". Build exactly
+-- that inside the brackets (an inner join: lines + their completed
+-- order), then LEFT JOIN products to the result.
+SELECT p.category, count(i.orderID) AS lines, coalesce(sum(i.lineTotal), 0) AS revenue
+FROM products p
+LEFT JOIN (order_items i
+           JOIN orders o ON o.orderID = i.orderID
+                        AND o.status  = 'completed')
+       ON i.productID = p.productID
+GROUP BY p.category
+ORDER BY revenue DESC;
+-- Every category from query 2 with the same revenue, AND Chairs at 0.
 -- (coalesce turns the NULL sum into 0: sum of no rows is NULL.)
+-- With one LEFT JOIN, "move it into ON" is the whole fix. With a chain
+-- of joins, ask which join the condition belongs to.
 
 
--- ---- 4. The other half of the rule: left-table conditions ----
+-- ---- 5. The other half of the rule: left-table conditions ----
 -- Intent: "Gyumri customers and their orders."
 -- Wrong: the left-table condition placed in ON.
 SELECT count(*) AS rows, count(o.orderID) AS matched
