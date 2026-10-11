@@ -1,11 +1,12 @@
 -- ============================================================
 -- Lecture 5 — Part 0: load the data
 --
--- Lecture 4's shop, with one change: an order can now hold SEVERAL
--- products, the way a real shopping cart does. Creates FIVE tables:
+-- The same shop data as Lecture 4 -- the same five CSV files: orders
+-- that hold SEVERAL products, the way a real shopping cart does.
+-- Creates FIVE tables:
 --
 --   customers    \
---   employees     |  the same as Lecture 4 (employees with the same
+--   employees     |  as in Lecture 4 (employees with the same
 --   products     /   managerID reporting line)
 --   orders        one row per ORDER -- the header: who bought, when,
 --                 where, status, and the order's total. No product
@@ -14,16 +15,17 @@
 --                 product, how many, at what price. Primary key
 --                 (orderID, productID): a product appears once per order.
 --
--- The data comes from generate_data.py: every Lecture 4 order keeps its
--- product as its first line, and 235 of the 600 orders got 1-3 more
--- lines (965 lines in all). orderTotal is the sum of the order's lines,
--- so totals and revenue are higher than in Lecture 4. Everything else
--- you know still holds: 600 orders, Levon and Astghik never ordered,
--- Ergonomic Chair Pro never sold, 181 online orders with no employee.
--- (Lecture 4's flat sales table isn't needed and isn't loaded.)
+-- The data comes from generate_data.py: every order of Lecture 3's
+-- one-product-per-order data keeps its product as its first line, and
+-- 235 of the 600 orders got 1-3 more lines (965 lines in all).
+-- orderTotal is the sum of the order's lines. 600 orders, Levon and
+-- Astghik never ordered, Ergonomic Chair Pro never sold, 181 online
+-- orders with no employee. (Lecture 4's flat sales table and star
+-- schema aren't needed here and aren't loaded.)
 --
--- Creates the lecture05 database too, if it doesn't exist yet, and
--- connects to it -- so you can start psql in ANY database:
+-- DROPS and recreates the lecture05 database, then connects to it --
+-- so start psql in ANOTHER database (psql postgres), not in lecture05:
+-- PostgreSQL can't drop the database you are connected to.
 --
 -- \copy resolves paths relative to where you STARTED psql, so run
 -- this from the lecture_5/ folder:    psql postgres
@@ -32,11 +34,11 @@
 -- 4's tables if they're in the same database.
 -- ============================================================
 
--- ---- The database: create it only if it's missing ----
--- Postgres has no CREATE DATABASE IF NOT EXISTS. Instead, this SELECT
--- produces the text of a CREATE DATABASE statement only when no
--- database called lecture05 exists, and \gexec runs whatever text the
--- SELECT produced: one statement the first time, nothing after that.
+-- ---- The database: start from an empty one every time ----
+-- (The two commented lines are the gentler alternative: create the
+-- database only if it's missing. Postgres has no CREATE DATABASE IF NOT
+-- EXISTS, so that SELECT produces the text of a CREATE DATABASE
+-- statement only when no lecture05 exists, and \gexec runs it.)
 -- SELECT 'CREATE DATABASE lecture05'
 -- WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'lecture05')\gexec
 DROP DATABASE IF EXISTS lecture05;

@@ -1,10 +1,10 @@
 # Lecture 5 — Subqueries → CTEs: Class Notes
 
-*Scope: subqueries in all four shapes, subqueries vs. joins, correlated subqueries and LATERAL, EXISTS, CTEs, and a first look at recursive CTEs. Grounded throughout in `lecture-05-demo.sql` and Lecture 4's shop, now with multi-product orders (30 customers / 8 employees / 37 products / 600 orders / 965 order lines) — every Demo number below comes from the same-numbered Part of the demo, run against that data.[^demo]*
+*Scope: subqueries in all four shapes, subqueries vs. joins, correlated subqueries and LATERAL, EXISTS, CTEs, set operations (UNION, INTERSECT, EXCEPT), and a first look at recursive CTEs. Grounded throughout in `lecture-05-demo.sql` and the same shop data as Lecture 4, with multi-product orders (30 customers / 8 employees / 37 products / 600 orders / 965 order lines) — every Demo number below comes from the same-numbered Part of the demo, run against that data.[^demo]*
 
-**The data: Lecture 4's shop, with one realistic change — an order can hold several products.**
+**The data: the same shop as Lecture 4 — an order can hold several products.**
 
-**Before (Lecture 4): one product per order.** The order row itself pointed at the product, through a single `productID` column — room for exactly one product.
+**Before (Lectures 2–3): one product per order.** The order row itself pointed at the product, through a single `productID` column — room for exactly one product.
 
 ```mermaid
 erDiagram
@@ -74,9 +74,9 @@ erDiagram
 4. **The price is stored on the line.** `unitPrice` records what this order paid, so old orders stay correct when `products.price` changes. (In this data every line happens to be sold at list price.)
 5. **The price of the split: two grains.** Joining `orders` to `order_items` gives one row per *line*, with the order's header copied onto each — `orderTotal` included. That is what makes Part 2.3's fan-out possible, and why this lecture keeps asking *"what grain is this table?"*
 
-`orderTotal` is the sum of the order's `lineTotal`s. Every Lecture 4 order kept its product as its first line, and **235** of the 600 orders gained 1–3 more lines (a sleeve or a mouse with a laptop, a cable with a phone…) — **965** lines in all.[^gen]
+`orderTotal` is the sum of the order's `lineTotal`s. Every order from the Lecture 2–3 data kept its product as its first line, and **235** of the 600 orders gained 1–3 more lines (a sleeve or a mouse with a laptop, a cable with a phone…) — **965** lines in all.[^gen]
 
-What you already know still holds, and the lecture leans on it: Levon and Astghik have zero orders. Ergonomic Chair Pro (productID 35) has never been ordered. 181 orders are online, with no employee. Hayk has never had an order cancelled. What changed is every total: completed revenue is now **157,078.41** (it was 145,935.12 when every order held one product). Every query in this lecture answers a question you can check against one of those facts, which is the only way to catch a query that is wrong without an error.
+What you already know still holds, and the lecture leans on it: Levon and Astghik have zero orders. Ergonomic Chair Pro (productID 35) has never been ordered. 181 orders are online, with no employee. Hayk has never had an order cancelled. What changed is every total: completed revenue is **157,078.41**, as in Lecture 4 (in Lecture 3, when every order held one product, it was 145,935.12). Every query in this lecture answers a question you can check against one of those facts, which is the only way to catch a query that is wrong without an error.
 
 ---
 
@@ -91,12 +91,12 @@ psql postgres
 
 It does four things:
 
-1. **Creates the `lecture05` database if it doesn't exist yet.** PostgreSQL has no `CREATE DATABASE IF NOT EXISTS`, so the script uses a psql idiom instead: a `SELECT` that produces the *text* `CREATE DATABASE lecture05` only when `pg_database` has no such database, followed by `\gexec`, which runs whatever text the `SELECT` produced. The first time that's one statement; after that it's nothing, so re-running never errors.
+1. **Drops and recreates the `lecture05` database**, so every run starts from an empty database. That's why you start `psql` in *another* database (`psql postgres`): PostgreSQL can't drop the database you are connected to. (The script keeps a gentler alternative in a comment: create the database only if it's missing. PostgreSQL has no `CREATE DATABASE IF NOT EXISTS`, so it uses a `SELECT` that produces the *text* `CREATE DATABASE lecture05` only when `pg_database` has no such database, followed by `\gexec`, which runs whatever text the `SELECT` produced.)
 2. **Connects to it** (`\c lecture05`), wherever you started.
 3. **Loads the data** — five tables: `customers`, `employees` (with Lecture 4's `managerID` reporting line), `products`, `orders` and `order_items`, from `data/*.csv`. It ends with the row counts: **30 / 8 / 37 / 600 / 965**. (Lecture 4's flat `sales` table isn't used in this lecture and isn't loaded.)
 4. **Runs `ANALYZE`**, so PostgreSQL has up-to-date statistics about every table before the first query. The planner chooses join methods from those statistics, and Part 5.4 shows a result whose row *order* depends on the join method — with `ANALYZE`, everyone gets the same plan and sees the same wrong order in class.
 
-Safe to re-run: it drops and recreates every table. The full script is Part 0 of `lecture-05-demo.sql`.
+Safe to re-run: it starts from an empty database every time. The full script is Part 0 of `lecture-05-demo.sql`.
 
 **The notebook.** `lecture-05-notebook.py` walks through the same lecture in marimo, one query per cell, with each trap shown as wrong query → what's wrong → fix. After the setup script, start it with your connection string:
 
@@ -462,7 +462,89 @@ This is the same family of misconception as "does the order of columns in `GROUP
 
 ---
 
-## Part 6 — Recursive CTEs (a preview, not the full story)
+## Part 6 — Set operations: UNION, INTERSECT, EXCEPT
+
+Everything so far *combined tables side by side*: a join adds columns. A set operation *stacks* two query results on top of each other: more rows, the same columns.
+
+| Operator | Result |
+|---|---|
+| `q1 UNION q2` | rows in `q1` or `q2`, duplicates removed |
+| `q1 UNION ALL q2` | every row of `q1`, then every row of `q2` |
+| `q1 INTERSECT q2` | rows in both |
+| `q1 EXCEPT q2` | rows in `q1` that are not in `q2` |
+
+The two queries must be *union compatible*: the same number of columns, with compatible types.[^union] `ORDER BY` and `LIMIT` written at the end apply to the whole combined result.[^setparen]
+
+### 6.1 UNION ALL vs. UNION — stacking two lists
+
+"One list of everybody: customers and staff." 30 + 8 = 38.
+
+**Demo numbers:** `UNION ALL` → **38** rows. `UNION` → **35**. `UNION` removes duplicate rows "in the same way as `DISTINCT`"[^union] — and here a row is just a first and last name. The three that vanished: the two customers named Anna Sargsyan, and the two customer/employee name pairs from Lecture 4 (Hayk Melikyan, Lilit Hovhannisyan — four different people, Lecture 4, 4.9). Each pair became one row.
+
+### 6.2 The trap: UNION inside a total
+
+"Completed revenue = in-store revenue + online revenue." Stack the two sets of order totals and add them up:
+
+```sql
+SELECT sum(orderTotal) AS revenue, count(*) AS order_totals
+FROM (SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'in_store'
+      UNION
+      SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t;
+```
+
+**Demo number (wrong):** **106,263.47** over **324** values. The real figure is **157,078.41** over **529** completed orders. `UNION` removed every repeated *value*: seven completed orders of exactly 249.00 are seven copies of the same one-column row, so 249.00 was counted once. A third of the revenue disappeared, and nothing errors.
+
+**Fix:** `UNION ALL` → **157,078.41** over **529**.
+
+**The rule to give students:** write `UNION ALL` unless you *want* duplicates removed — and when you do, say so in a comment. And the check is the usual one: the row count (324) should have been the number of completed orders you already know (529).
+
+### 6.3 Columns are paired by position, not by name
+
+Different numbers of columns is a loud error: `each UNION query must have the same number of columns`.
+
+The same number of columns in a *different order* is silent:
+
+```sql
+SELECT firstName, lastName, 'customer' AS source FROM customers
+UNION ALL
+SELECT lastName, firstName, 'employee' FROM employees;
+```
+
+**Demo number:** the employees come out as first name "Avagyan", last name "Marine" — and Ghazaryan Nare, Grigoryan Arman, Harutyunyan Ani. The first column of the second query went into the first column of the result, whatever its name; both columns are text, so nothing errors. As the result's header shows, the column names come from the first query.
+
+### 6.4 INTERSECT — rows in both results
+
+Lecture 4's question "who is on both lists?", as `SELECT firstName, lastName FROM customers INTERSECT SELECT firstName, lastName FROM employees`:
+
+**Demo number:** **2** — Hayk Melikyan and Lilit Hovhannisyan. The same answer as Lecture 4's join on names, *and the same mistake*: they are four different people (Lecture 4, 4.9). `INTERSECT` compares values; names are not identifiers.
+
+With a real key it is safe: customers who have **both** returned and cancelled an order — `INTERSECT` the two lists of `customerID`s, and use the result as an `IN` subquery to look up the names. **Demo number:** **12** customers.
+
+### 6.5 EXCEPT — rows in the first result, not in the second
+
+"Which products have never been ordered?" — a fourth way, next to Part 2.1's three: `SELECT productID FROM products EXCEPT SELECT productID FROM order_items`. **Demo number:** productID **35**, Ergonomic Chair Pro, again.
+
+**Part 2.2's question, where `NOT IN` returned nothing:** `SELECT employeeID FROM employees EXCEPT SELECT employeeID FROM orders WHERE status = 'cancelled'`. **Demo number:** **5** — Hayk, correct. Set operations compare rows the way `DISTINCT` does, and there "null values are considered equal".[^distinct] The five NULL `employeeID`s on the right could only remove a NULL row from the left — and no employee has a NULL id. Same data, same question: `NOT IN` → 0 rows, `EXCEPT` → the right answer.
+
+`EXCEPT` only returns the columns it compared. To get names, use it as a subquery: customers who never returned anything — `WHERE customerID IN (SELECT customerID FROM customers EXCEPT SELECT customerID FROM orders WHERE status = 'returned')`. **Demo number:** **8**, including Levon and Astghik, who never ordered at all and so never returned anything either.
+
+You have seen `EXCEPT` before: Lecture 4 used it to prove the split into tables was lossless (4.13), and its step file for 4.14 used it to prove `GROUP BY` column order doesn't matter — zero rows of difference means the two results are the same.
+
+### 6.6 The ALL versions keep count
+
+`EXCEPT` removes every copy of a matching row; `EXCEPT ALL` removes one copy per match.[^union] **Demo numbers:** `(1, 1, 2) EXCEPT (1)` → `2`; `(1, 1, 2) EXCEPT ALL (1)` → `1, 2`. `INTERSECT ALL` keeps count the same way. Mention it; you'll rarely need it.
+
+### 6.7 ORDER BY and LIMIT for one branch need parentheses
+
+"The biggest completed order in each channel": wrap each query in parentheses, each with its own `ORDER BY orderTotal DESC, orderID LIMIT 1`, and `UNION ALL` the two. Without the parentheses, the `ORDER BY` and `LIMIT` would apply to the whole result — or be a syntax error.[^setparen] **Demo number:** in store order 1385, online order 1158, both 2,500.00 (two online orders tie at 2,500.00, so `orderID` picks one — the tiebreaker habit from 3.5).
+
+When you mix operators, `INTERSECT` binds more tightly than `UNION` and `EXCEPT`[^union] — add parentheses rather than rely on it.
+
+**A bridge to Part 7:** `WITH RECURSIVE` is a `UNION ALL` of two queries — a starting row, and a step that is repeated.
+
+---
+
+## Part 7 — Recursive CTEs (a preview, not the full story)
 
 Lecture 4 walked the management chain with self-joins: one join for "manager", a second for "manager's manager". Each extra level needs one more join — the query hard-codes the depth.
 
@@ -493,7 +575,7 @@ One warning, and that's all for today: if the data contains a cycle (A reports t
 
 ---
 
-## Part 7 — Why all of this matters (the one idea to leave the room with)
+## Part 8 — Why all of this matters (the one idea to leave the room with)
 
 Look back at the traps from today:
 
@@ -505,14 +587,16 @@ Look back at the traps from today:
 | `EXISTS` without the correlation | 30 customers gave 1 star | 4 |
 | Fan-out through a CTE | Abovyan has the highest average spend (8,507.37) | Gyumri (6,714.16) |
 | `ORDER BY` inside the CTE | Anna Sargsyan is the top customer | Aram Vardanyan |
+| `UNION` where `UNION ALL` was meant | completed revenue 106,263.47 | 157,078.41 |
+| Set operation with the columns in a different order | an employee whose first name is "Avagyan" | Marine Avagyan |
 
-None of them threw an error. Every one produced a result that looked like a completely normal table — an empty list, a revenue figure, a full list, four believable averages, five real customers with real totals.
+None of them threw an error. Every one produced a result that looked like a completely normal table — an empty list, a revenue figure, a full list, four believable averages, five real customers with real totals, a smaller revenue, a list of names in the wrong columns.
 
 **That's the same point as Lecture 4, and it will be the point of every lecture:** SQL correctness bugs are almost always silent. Subqueries and CTEs don't change that. A CTE makes a query *easier to read*, and that makes it easier to trust without checking. The checks are the same ones as last week:
 
 - **Check against ground truth you already have.** A 1-star list containing Levon and Astghik, a revenue that isn't 157,078.41, an order count that isn't 600 — each is caught in seconds by someone who knows those numbers.
 - **Compare row counts.** `count(*)` vs. `count(column)` on the subquery's column catches the NULL that breaks `NOT IN` (27 vs. 22). `count(*)` vs. `count(DISTINCT key)` after a join catches fan-out (844 lines vs. 529 orders; 529 vs. 28 customers). And when you can predict a row count — 28 customers × 3 orders = 84 for the LATERAL top-3 — check it.
-- **Answer the question two independent ways.** Anti-join, `NOT IN`, `NOT EXISTS` should agree; when one disagrees, it's the one to distrust.
+- **Answer the question two independent ways.** Anti-join, `NOT IN`, `NOT EXISTS` and `EXCEPT` should agree; when one disagrees, it's the one to distrust.
 - **Look at the column you sorted by.** If it isn't in order, your `ORDER BY` is in the wrong place.
 - **All or nothing is suspicious.** A filter that keeps every row or no rows usually isn't filtering what you think.
 
@@ -527,16 +611,11 @@ Each item in the brief's TODO list, answered in order, then other things worth k
 **From the brief's list**
 
 - **Lecture 4 files and schema: found, and they match the brief** (tables, columns, nullable `employeeID`, CHECK constraints, 600 / 30 / 8 / 37 / 600, and the listed facts) — with one exception: the brief says "Davit has 8 orders"; he has **52**. Arpine Simonyan and Mher Sargsyan have 8. Nothing here uses the "8" claim.
-- **The dataset is deliberately NOT identical to Lecture 4's — changed on request, against the brief.** The brief said to reuse Lecture 4's data unchanged; `TODO.md` ("Add multi-product orders") asked for real carts, and you confirmed that every example should use the new schema. So Lecture 5 has its own data, made by `generate_data.py` from the original one-product-per-order CSVs in `lectures/lecture_3/data/` (byte-identical to Lecture 4's; not modified):
-  - `orders` is now a header (no `productID`, `quantity`, `unitPrice`, `discountPct` — they moved to the lines); `order_items` holds one row per product per order, with a stored `lineTotal`. `orderTotal` = sum of the lines; `customers.moneySpent` was recomputed the same way as Lecture 3's generator.
-  - Every Lecture 4 order kept its product as its first line; 235 of 600 orders gained 1–3 add-on lines (965 lines). Seeded, so re-running the script reproduces the files exactly.
-  - **Kept on purpose:** the 600 orders with their customers, employees, dates, channels, statuses and ratings; customers, employees and products byte-identical; Levon and Astghik with no orders; productID 35 never added, so still never ordered; 181 online orders without an employee.
-  - **Changed:** every total. Completed revenue is **157,078.41** (Lecture 4: 145,935.12), and every spend, average and share built on totals moved with it. Students who remember 145,935.12 should be told why it changed — that's the opening of the notes.
-  - Lecture 4's flat `sales` table and star schema are not loaded; no Lecture 5 query uses them.
-  - TODO.md's open question ("what happens to `orders.productID` … once lines exist") is answered by *moving* those columns, not keeping copies on the header.
+- **The dataset is not the one the brief described — changed on request.** The brief said to reuse Lecture 4's one-product-per-order data unchanged; `TODO.md` ("Add multi-product orders") asked for real carts, and you confirmed every example should use the new schema. `generate_data.py` builds it from the original CSVs in `lectures/lecture_3/data/` (not modified): `orders` became a header and `order_items` holds the lines (`lineTotal` stored; `orderTotal` = sum of lines; `moneySpent` recomputed); every original order keeps its product as its first line; 235 of 600 orders gained 1–3 lines (965 lines); seeded, so the files reproduce exactly. Kept: customers, employees, products byte-identical; the 600 orders' customers, dates, channels, statuses, ratings; Levon and Astghik with no orders; productID 35 never ordered; 181 online orders. Lecture 4 has since switched to **the same five CSV files** (byte-identical), so Lectures 4 and 5 now share one dataset and the same totals (completed revenue 157,078.41); only Lecture 3 has the old 145,935.12.
+- **Set operations were added after the first version, on request.** They are Part 6; recursive CTEs moved to Part 7 and the synthesis/drill to Part 8 (step files `06-set-operations.sql`, `07-recursive.sql`, `08-drill.sql`). Parts 1–5 kept their numbers, so references like "5.3" and "5.4" are unchanged. Part 6 adds one error-on-purpose statement (six in total) and three wrong-on-purpose ones, including a fifth drill question.
 - **Traps: all reproduce on the real data, with no constructed tables.** NOT IN/NULL: 0 rows instead of Hayk. Omitted-correlation EXISTS: 30 customers instead of 4 (and 0 instead of 26 for NOT EXISTS). CTE fan-out: believable averages that rank Abovyan first instead of Gyumri. New with the multi-product data: the cart fan-out (247,923.72 instead of 157,078.41) and the JOIN-instead-of-EXISTS double count (29,810.88 instead of 25,955.91). The ORDER BY-inside-a-CTE trap also reproduces, with one caveat (see below). The NOT IN case uses the real NULLs (5 online cancelled orders); the only constructed example is the miniature `5 NOT IN (1, 2, NULL)`.
 - **Recursive CTE: the real hierarchy is too shallow, so a synthetic extension is used.** The real chart has 3 levels (Vahe → Hayk/Marine → Nare/Lilit/Arman), so Lecture 4's two-hop self-join already reaches the top for everyone. Part 6 adds a hypothetical trainee, Sevak, reporting to Nare, *inside a CTE*, so no table is changed. Say out loud in class that Sevak is invented.
-- **Estimated numbers: none in the files.** One shortcut to report: while drafting, I wrote two Part 7 drill comments (the fan-out "Total orders" and the "Top 3 products" list) *before* running them, and both guesses were wrong. Running the draft caught them, and the comments were replaced with real output before the demo file was assembled. After that, every number in the notes, demo, Q&A and notebook was checked by a run (see the last bullet).
+- **Estimated numbers: none in the files.** One shortcut to report: while drafting, I wrote two drill comments (the drill is now Part 8) (the fan-out "Total orders" and the "Top 3 products" list) *before* running them, and both guesses were wrong. Running the draft caught them, and the comments were replaced with real output before the demo file was assembled. After that, every number in the notes, demo, Q&A and notebook was checked by a run (see the last bullet).
 - **Style deviations from `lecture-04-notes.md`:** (1) footnotes citing the PostgreSQL documentation, following the "every statement gets a source" preference; Lecture 4's notes don't have them. (2) A few short SQL blocks and three small tables, which Lecture 4's notes mostly avoid, because the subquery shapes are hard to describe in prose alone. (3) The notes are longer than Lecture 4's (seven Parts plus a TODO section).
 - **Notebook connection: works, but not the way the brief described.** The brief asked for SQLAlchemy/psycopg2. Neither is installed, so the notebook uses `psycopg` 3, which `pyproject.toml` declares and your Chinook notebook uses. It reads `LECTURE05_DSN` (default `postgresql://postgres:postgres@localhost:5432/lecture05`). It does not load data itself: run `psql postgres`, then `\i steps/00-setup.sql` first, because `\copy` is a psql command. The five error-on-purpose statements are Python cells that catch the error and show PostgreSQL's message, so the notebook runs top to bottom; every other query is a native `mo.sql` cell.
 - **Notebook vs. notes/demo: no disagreement.** Each notebook SQL cell is copied word for word from the demo by a generator script, which fails if any demo statement is missing. Run against a database loaded by the setup script, all 70 SQL cells returned exactly the values written in the notes and demo, on PostgreSQL 14, 16 and 18. **Numbers did change, on purpose:** the switch to multi-product orders moved every total (see the dataset bullet above). The notes, demo, steps, Q&A and notebook were all re-run and rewritten against the new data, so they agree with each other — but not with the first version of this lecture, or with Lecture 4's 145,935.12. Earlier non-data fixes: `ANALYZE` was added to the setup script (next bullet), and the demo header's count of wrong-on-purpose queries was corrected (now thirteen).
@@ -545,7 +624,7 @@ Each item in the brief's TODO list, answered in order, then other things worth k
 **Also worth knowing**
 
 - **The ORDER BY-inside-CTE trap depends on the query plan.** On a freshly loaded database, *before* PostgreSQL has gathered statistics, the planner can choose a plan that happens to keep the CTE's order: the Part 7 drill's version came out correctly sorted on one run and scrambled on the next. Fix: `steps/00-setup.sql` now ends with `ANALYZE` (Lecture 4's setup doesn't have it). With it, the whole demo returns identical results on fresh PostgreSQL 14, 16 and 18, and both ORDER BY traps scramble on all three. A student who skips the setup script might see a correctly ordered result. That is the lesson itself ("may happen to survive"), but be ready for it.
-- **The setup script creates the database.** `steps/00-setup.sql` (and Part 0 of the demo) creates `lecture05` if it doesn't exist (`SELECT ... \gexec`, since PostgreSQL has no `CREATE DATABASE IF NOT EXISTS`) and connects to it with `\c`. Tested on a fresh server: database missing, already present, and started from inside `lecture05`.
+- **The setup script drops and recreates the database.** You changed `steps/00-setup.sql` to `DROP DATABASE IF EXISTS lecture05; CREATE DATABASE lecture05;` (the create-if-missing `\gexec` version is kept as a comment). Part 0 of the demo and of these notes now match it. Run it from another database (`psql postgres`): PostgreSQL can't drop the database you're connected to.
 - **The notebook was run, not opened.** It was checked with `marimo check`, `marimo export html` (which runs every cell in marimo's runtime) and `app.run()`. It has not been opened in the `marimo edit` browser UI. Click through it once before class.
 - **One spot breaks the notebook's wrong → explanation → fix pattern.** In Part 4.3, the extra "unqualified `customerID = customerID`" variant is followed by an explanation but not by a fix cell of its own. Its fix is the correlated query shown just before it. The four main traps all follow the pattern.
 - **Folder name.** The brief asked for `lecture-05/`; the files are in `lectures/lecture_5/` to match `lecture_2` … `lecture_4` and the README's layout. Besides the four requested files, the folder has `data/` (this lecture's own CSVs from `generate_data.py`, plus `all_inserts.sql`) and `steps/00-…07-…` (the demo split by Part), because every earlier lecture has them and the demo's Part 0 loads from `data/`.
@@ -562,4 +641,7 @@ Each item in the brief's TODO list, answered in order, then other things worth k
 [^l2]: `lectures/lecture_2/lecture-02-notes.md`, "Optional aside: what if one order could hold several products?" — the same `ORDERS ||--|{ ORDER_ITEMS` / `PRODUCTS ||--o{ ORDER_ITEMS` diagram, and: "Every M:N relationship you'll ever model resolves to this same trick: a junction table in the middle."
 [^gen]: `generate_data.py` in this folder: reads the original one-product-per-order CSVs (`lectures/lecture_3/data/`, byte-identical to the ones Lecture 4 started from), keeps every order's product as its first line, adds 1–3 commonly-bought-together products to about 4 in 10 orders (seeded), and recomputes `orderTotal` and `moneySpent`. Counts from `steps/00-setup.sql` (30 / 8 / 37 / 600 / 965) and the demo.
 [^lateral]: PostgreSQL 16 documentation, §7.2.1.5 "LATERAL Subqueries": "Subqueries appearing in FROM can be preceded by the key word LATERAL. This allows them to reference columns provided by preceding FROM items. (Without LATERAL, each subquery is evaluated independently and so cannot cross-reference any other FROM item.)" … "for each row of the FROM item providing the cross-referenced column(s) … the LATERAL item is evaluated using that row or row set's values of the columns." … "It is often particularly handy to LEFT JOIN to a LATERAL subquery, so that source rows will appear in the result even if the LATERAL subquery produces no rows for them." https://www.postgresql.org/docs/16/queries-table-expressions.html#QUERIES-LATERAL
+[^union]: PostgreSQL 16 documentation, §7.4 "Combining Queries (UNION, INTERSECT, EXCEPT)": "UNION effectively appends the result of query2 to the result of query1 (although there is no guarantee that this is the order in which the rows are actually returned). Furthermore, it eliminates duplicate rows from its result, in the same way as DISTINCT, unless UNION ALL is used." … "INTERSECT returns all rows that are both in the result of query1 and in the result of query2. Duplicate rows are eliminated unless INTERSECT ALL is used." … "EXCEPT returns all rows that are in the result of query1 but not in the result of query2." … "the two queries must be 'union compatible', which means that they return the same number of columns and the corresponding columns have compatible data types" … "INTERSECT binds more tightly than those two operators." https://www.postgresql.org/docs/16/queries-union.html
+[^distinct]: PostgreSQL 16 documentation, §7.3.3 "DISTINCT": "Obviously, two rows are considered distinct if they differ in at least one column value. Null values are considered equal in this comparison." https://www.postgresql.org/docs/16/queries-select-lists.html
+[^setparen]: PostgreSQL 16 documentation, §7.4: "You can also surround an individual query with parentheses. This is important if the query needs to use any of the clauses discussed in following sections, such as LIMIT. Without parentheses, you'll get a syntax error, or else the clause will be understood as applying to the output of the set operation rather than one of its inputs." https://www.postgresql.org/docs/16/queries-union.html
 [^recursive]: PostgreSQL 16 documentation, §7.8.2 "Recursive Queries": the form is "a non-recursive term, then UNION (or UNION ALL), then a recursive term", evaluated repeatedly "so long as the working table is not empty"; and "it is important to be sure that the recursive part of the query will eventually return no tuples, or else the query will loop indefinitely." https://www.postgresql.org/docs/16/queries-with.html

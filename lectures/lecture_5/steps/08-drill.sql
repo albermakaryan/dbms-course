@@ -1,6 +1,6 @@
 -- ============================================================
--- Lecture 5 — Part 7: Verification drill
--- Run after Part 6. Four queries that run, look fine, and are wrong.
+-- Lecture 5 — Part 8: Verification drill
+-- Run after Part 7. Five queries that run, look fine, and are wrong.
 -- For each one: which check from the notes catches it?
 -- ============================================================
 
@@ -35,6 +35,14 @@ FROM ranked r
 JOIN products p ON p.productID = r.productID
 LIMIT 3;
 -- "Top 3 products": ThinkPad X1 Carbon 19, Laptop Sleeve 14 27, MX Keys 37
+
+SELECT channel, sum(orderTotal) AS revenue
+FROM (SELECT channel, orderTotal FROM orders WHERE status = 'completed' AND channel = 'in_store'
+      UNION
+      SELECT channel, orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t
+GROUP BY channel
+ORDER BY channel;
+-- "Revenue per channel": in_store 69765.18, online 50436.13
 
 -- ---- Answers ----
 -- 1. NOT IN + NULL: the 1-star list holds the online order's NULL.
@@ -71,3 +79,14 @@ LIMIT 3;
 -- USB-C Cable 1m    |           128
 -- HDMI 2.1 Cable 2m |            85
 -- USB Flash 128GB   |            82
+
+-- 5. UNION removed repeated (channel, orderTotal) rows. Together the two
+-- channels must make 157078.41; these make 120201.31.
+SELECT channel, sum(orderTotal) AS revenue, count(*) AS orders
+FROM orders
+WHERE status = 'completed'
+GROUP BY channel
+ORDER BY channel;
+-- channel  | revenue   | orders
+-- in_store | 100222.48 |    365
+-- online   |  56855.93 |    164

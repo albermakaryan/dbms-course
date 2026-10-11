@@ -3,18 +3,17 @@
 -- YSU, Data Science for Business
 --
 -- Subqueries in every shape (scalar, column, row, table), subqueries
--- vs. joins, correlated subqueries, LATERAL, EXISTS, CTEs, and a first
--- look at WITH RECURSIVE -- on Lecture 4's shop, now with real
--- multi-product orders: an order header (orders) and its lines
--- (order_items). The customers, staff, products and the 600 orders are
--- the ones you know from Lecture 4, so most answers can be checked
--- against a number you already know.
+-- vs. joins, correlated subqueries, LATERAL, EXISTS, CTEs, set
+-- operations (UNION, INTERSECT, EXCEPT), and a first look at WITH
+-- RECURSIVE -- on the same shop data as Lecture 4: orders with several
+-- products each, an order header (orders) and its lines (order_items).
+-- Most answers can be checked against a number you already know.
 --
 -- Run this whole script at once (from the lecture_5/ folder, so the
 -- \copy paths in Part 0 resolve), or run each part separately from
--- steps/00-setup.sql through steps/07-drill.sql (numbered to match
--- the Parts in lecture-05-notes.md). Five statements error ON
--- PURPOSE -- the comments say which. Thirteen more are WRONG on
+-- steps/00-setup.sql through steps/08-drill.sql (numbered to match
+-- the Parts in lecture-05-notes.md). Six statements error ON
+-- PURPOSE -- the comments say which. Sixteen more are WRONG on
 -- purpose and run without any error -- the comments say which, and
 -- what the right answer is.
 -- ============================================================
@@ -24,11 +23,12 @@
 -- ============================================================
 -- Lecture 5 — Part 0: load the data
 --
--- Lecture 4's shop, with one change: an order can now hold SEVERAL
--- products, the way a real shopping cart does. Creates FIVE tables:
+-- The same shop data as Lecture 4 -- the same five CSV files: orders
+-- that hold SEVERAL products, the way a real shopping cart does.
+-- Creates FIVE tables:
 --
 --   customers    \
---   employees     |  the same as Lecture 4 (employees with the same
+--   employees     |  as in Lecture 4 (employees with the same
 --   products     /   managerID reporting line)
 --   orders        one row per ORDER -- the header: who bought, when,
 --                 where, status, and the order's total. No product
@@ -37,16 +37,17 @@
 --                 product, how many, at what price. Primary key
 --                 (orderID, productID): a product appears once per order.
 --
--- The data comes from generate_data.py: every Lecture 4 order keeps its
--- product as its first line, and 235 of the 600 orders got 1-3 more
--- lines (965 lines in all). orderTotal is the sum of the order's lines,
--- so totals and revenue are higher than in Lecture 4. Everything else
--- you know still holds: 600 orders, Levon and Astghik never ordered,
--- Ergonomic Chair Pro never sold, 181 online orders with no employee.
--- (Lecture 4's flat sales table isn't needed and isn't loaded.)
+-- The data comes from generate_data.py: every order of Lecture 3's
+-- one-product-per-order data keeps its product as its first line, and
+-- 235 of the 600 orders got 1-3 more lines (965 lines in all).
+-- orderTotal is the sum of the order's lines. 600 orders, Levon and
+-- Astghik never ordered, Ergonomic Chair Pro never sold, 181 online
+-- orders with no employee. (Lecture 4's flat sales table and star
+-- schema aren't needed here and aren't loaded.)
 --
--- Creates the lecture05 database too, if it doesn't exist yet, and
--- connects to it -- so you can start psql in ANY database:
+-- DROPS and recreates the lecture05 database, then connects to it --
+-- so start psql in ANOTHER database (psql postgres), not in lecture05:
+-- PostgreSQL can't drop the database you are connected to.
 --
 -- \copy resolves paths relative to where you STARTED psql, so run
 -- this from the lecture_5/ folder:    psql postgres
@@ -55,13 +56,15 @@
 -- 4's tables if they're in the same database.
 -- ============================================================
 
--- ---- The database: create it only if it's missing ----
--- Postgres has no CREATE DATABASE IF NOT EXISTS. Instead, this SELECT
--- produces the text of a CREATE DATABASE statement only when no
--- database called lecture05 exists, and \gexec runs whatever text the
--- SELECT produced: one statement the first time, nothing after that.
-SELECT 'CREATE DATABASE lecture05'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'lecture05')\gexec
+-- ---- The database: start from an empty one every time ----
+-- (The two commented lines are the gentler alternative: create the
+-- database only if it's missing. Postgres has no CREATE DATABASE IF NOT
+-- EXISTS, so that SELECT produces the text of a CREATE DATABASE
+-- statement only when no lecture05 exists, and \gexec runs it.)
+-- SELECT 'CREATE DATABASE lecture05'
+-- WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'lecture05')\gexec
+DROP DATABASE IF EXISTS lecture05;
+CREATE DATABASE lecture05;
 
 \c lecture05
 
@@ -969,8 +972,194 @@ LIMIT 5;
 
 
 -- ============================================================
--- Lecture 5 — Part 6: Recursive CTEs (a preview)
+-- Lecture 5 — Part 6: Set operations: UNION, INTERSECT, EXCEPT
 -- Run after Part 5.
+--
+-- A JOIN puts two tables SIDE BY SIDE: more columns per row.
+-- A set operation STACKS two query results: more rows, same columns.
+--   q1 UNION q2       rows in q1 or q2, duplicates removed
+--   q1 UNION ALL q2   every row of q1, then every row of q2
+--   q1 INTERSECT q2   rows in both
+--   q1 EXCEPT q2      rows in q1 that are not in q2
+-- Both queries must return the same number of columns, with
+-- compatible types. ORDER BY / LIMIT at the end apply to the WHOLE
+-- result.
+-- ============================================================
+
+-- ---- 6.1 UNION ALL vs UNION: stacking two lists ----
+-- "One list of everybody: customers and staff." 30 + 8 = 38.
+SELECT count(*) AS people
+FROM (SELECT firstName, lastName FROM customers
+      UNION ALL
+      SELECT firstName, lastName FROM employees) AS everyone;
+-- people
+-- 38
+
+-- UNION removes duplicate ROWS -- and here a row is just a name:
+SELECT count(*) AS people
+FROM (SELECT firstName, lastName FROM customers
+      UNION
+      SELECT firstName, lastName FROM employees) AS everyone;
+-- people
+-- 35
+
+-- Which 3 people vanished? The names that occur twice:
+SELECT firstName, lastName, count(*) AS times
+FROM (SELECT firstName, lastName FROM customers
+      UNION ALL
+      SELECT firstName, lastName FROM employees) AS everyone
+GROUP BY firstName, lastName
+HAVING count(*) > 1
+ORDER BY lastName;
+-- firstname | lastname     | times
+-- Lilit     | Hovhannisyan |     2
+-- Hayk      | Melikyan     |     2
+-- Anna      | Sargsyan     |     2
+-- Two customers named Anna Sargsyan, and the two customer/employee
+-- name pairs from Lecture 4 (4.9). UNION merged each pair into one.
+
+-- ---- 6.2 THE TRAP: UNION inside a total ----
+-- "Completed revenue = in-store revenue + online revenue." Stack the
+-- two sets of order totals and add them up:
+SELECT sum(orderTotal) AS revenue, count(*) AS order_totals
+FROM (SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'in_store'
+      UNION
+      SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t;
+-- WRONG:
+-- revenue   | order_totals
+-- 106263.47 |          324
+-- The real figure is 157078.41 over 529 completed orders. UNION
+-- removed every repeated VALUE: seven completed orders of exactly
+-- 249.00 are seven copies of the same row to UNION, so 249.00 was
+-- counted once. Nothing errors.
+
+-- FIX: UNION ALL keeps every row.
+SELECT sum(orderTotal) AS revenue, count(*) AS order_totals
+FROM (SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'in_store'
+      UNION ALL
+      SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t;
+-- revenue   | order_totals
+-- 157078.41 |          529
+-- Rule of thumb: UNION ALL unless you WANT duplicates removed -- and
+-- then say so in a comment.
+
+-- ---- 6.3 Columns are paired by POSITION, not by name ----
+-- Error on purpose: different numbers of columns.
+SELECT firstName, lastName FROM customers
+UNION
+SELECT firstName FROM employees;
+-- ERROR:  each UNION query must have the same number of columns
+
+-- WRONG, and silent: the same number of columns, in a different order.
+SELECT firstName, lastName, 'customer' AS source FROM customers
+UNION ALL
+SELECT lastName, firstName, 'employee' FROM employees
+ORDER BY source DESC, firstName
+LIMIT 4;
+-- firstname   | lastname | source
+-- Avagyan     | Marine   | employee
+-- Ghazaryan   | Nare     | employee
+-- Grigoryan   | Arman    | employee
+-- Harutyunyan | Ani      | employee
+-- The first column of the second query went into the first column of
+-- the result -- whatever its name. Both are text, so nothing errors.
+-- The column names (firstName, lastName) come from the FIRST query.
+
+-- ---- 6.4 INTERSECT: rows in both results ----
+-- Lecture 4's question, "who is on both lists?", as INTERSECT:
+SELECT firstName, lastName FROM customers
+INTERSECT
+SELECT firstName, lastName FROM employees
+ORDER BY lastName;
+-- firstname | lastname
+-- Lilit     | Hovhannisyan
+-- Hayk      | Melikyan
+-- Same answer as Lecture 4's join on names -- and the same mistake:
+-- these are four different people (Lecture 4, 4.9). INTERSECT
+-- compares VALUES; names are not identifiers.
+
+-- With a real key it's safe: customers who have BOTH returned and
+-- cancelled an order. INTERSECT gives the ids; IN looks up the names.
+SELECT c.customerID, c.firstName, c.lastName
+FROM customers c
+WHERE c.customerID IN (SELECT customerID FROM orders WHERE status = 'returned'
+                       INTERSECT
+                       SELECT customerID FROM orders WHERE status = 'cancelled')
+ORDER BY c.customerID;
+-- 12 rows, Anna Sargsyan (customerID 1) to Gevorg Kocharyan (28)
+
+-- ---- 6.5 EXCEPT: rows in the first result, not in the second ----
+-- Part 2.1's question -- a fourth way:
+SELECT productID FROM products
+EXCEPT
+SELECT productID FROM order_items;
+-- productid
+-- 35
+
+-- Part 2.2's question, where NOT IN returned nothing:
+SELECT employeeID FROM employees
+EXCEPT
+SELECT employeeID FROM orders WHERE status = 'cancelled';
+-- employeeid
+-- 5
+-- Hayk -- correct. Set operations compare rows the way DISTINCT does:
+-- NULL counts as equal to NULL. The 5 NULLs on the right could only
+-- remove a NULL from the left, and no employee has a NULL id.
+
+-- EXCEPT returns only the columns you compared. Need names? Use it as
+-- a subquery. Customers who never returned anything:
+SELECT c.customerID, c.firstName, c.lastName
+FROM customers c
+WHERE c.customerID IN (SELECT customerID FROM customers
+                       EXCEPT
+                       SELECT customerID FROM orders WHERE status = 'returned')
+ORDER BY c.customerID;
+-- 8 rows -- including Levon (24) and Astghik (29), who never ordered
+-- at all, so they never returned anything either.
+
+-- ---- 6.6 The ALL versions keep count ----
+-- EXCEPT removes every copy; EXCEPT ALL removes one copy per match.
+SELECT x FROM (VALUES (1), (1), (2)) AS a(x)
+EXCEPT
+SELECT x FROM (VALUES (1)) AS b(x);
+-- x
+-- 2
+
+SELECT x FROM (VALUES (1), (1), (2)) AS a(x)
+EXCEPT ALL
+SELECT x FROM (VALUES (1)) AS b(x)
+ORDER BY x;
+-- x
+-- 1
+-- 2
+
+-- ---- 6.7 ORDER BY / LIMIT for ONE branch need parentheses ----
+-- "The biggest completed order in each channel." Without the
+-- parentheses, ORDER BY and LIMIT would apply to the whole result.
+(SELECT channel, orderID, orderTotal
+ FROM orders
+ WHERE status = 'completed' AND channel = 'in_store'
+ ORDER BY orderTotal DESC, orderID
+ LIMIT 1)
+UNION ALL
+(SELECT channel, orderID, orderTotal
+ FROM orders
+ WHERE status = 'completed' AND channel = 'online'
+ ORDER BY orderTotal DESC, orderID
+ LIMIT 1);
+-- channel  | orderid | ordertotal
+-- in_store |    1385 |    2500.00
+-- online   |    1158 |    2500.00
+-- (two online orders tie at 2500.00; orderID picks one -- Part 3.5)
+--
+-- Next: WITH RECURSIVE is a UNION ALL of two queries -- a starting
+-- row and a step that is repeated.
+
+
+
+-- ============================================================
+-- Lecture 5 — Part 7: Recursive CTEs (a preview)
+-- Run after Part 6.
 -- ============================================================
 
 -- ---- 6.1 Lecture 4's two-hop self-join ----
@@ -1056,8 +1245,8 @@ ORDER BY path;
 
 
 -- ============================================================
--- Lecture 5 — Part 7: Verification drill
--- Run after Part 6. Four queries that run, look fine, and are wrong.
+-- Lecture 5 — Part 8: Verification drill
+-- Run after Part 7. Five queries that run, look fine, and are wrong.
 -- For each one: which check from the notes catches it?
 -- ============================================================
 
@@ -1092,6 +1281,14 @@ FROM ranked r
 JOIN products p ON p.productID = r.productID
 LIMIT 3;
 -- "Top 3 products": ThinkPad X1 Carbon 19, Laptop Sleeve 14 27, MX Keys 37
+
+SELECT channel, sum(orderTotal) AS revenue
+FROM (SELECT channel, orderTotal FROM orders WHERE status = 'completed' AND channel = 'in_store'
+      UNION
+      SELECT channel, orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t
+GROUP BY channel
+ORDER BY channel;
+-- "Revenue per channel": in_store 69765.18, online 50436.13
 
 -- ---- Answers ----
 -- 1. NOT IN + NULL: the 1-star list holds the online order's NULL.
@@ -1128,3 +1325,14 @@ LIMIT 3;
 -- USB-C Cable 1m    |           128
 -- HDMI 2.1 Cable 2m |            85
 -- USB Flash 128GB   |            82
+
+-- 5. UNION removed repeated (channel, orderTotal) rows. Together the two
+-- channels must make 157078.41; these make 120201.31.
+SELECT channel, sum(orderTotal) AS revenue, count(*) AS orders
+FROM orders
+WHERE status = 'completed'
+GROUP BY channel
+ORDER BY channel;
+-- channel  | revenue   | orders
+-- in_store | 100222.48 |    365
+-- online   |  56855.93 |    164

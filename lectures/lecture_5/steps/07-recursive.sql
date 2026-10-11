@@ -1,6 +1,6 @@
 -- ============================================================
--- Lecture 5 — Part 6: Recursive CTEs (a preview)
--- Run after Part 5.
+-- Lecture 5 — Part 7: Recursive CTEs (a preview)
+-- Run after Part 6.
 -- ============================================================
 
 -- ---- 6.1 Lecture 4's two-hop self-join ----

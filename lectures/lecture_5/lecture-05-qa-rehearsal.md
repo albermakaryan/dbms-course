@@ -7,8 +7,8 @@
 **1. Why does an order have two tables now?**
 Because a real order can hold several products. `orders` is the header — one row per order (who, when, status, `orderTotal`). `order_items` is the lines — one row per product in the order. 235 of the 600 orders have more than one line; 965 lines in all.
 
-**2. Why did completed revenue change from 145,935.12 to 157,078.41?**
-The orders gained extra products, so their totals grew. The orders themselves — customers, dates, statuses — are the same 600 as in Lecture 4.
+**2. Why is completed revenue 157,078.41 and not Lecture 3's 145,935.12?**
+In Lecture 3 every order held one product. Since Lecture 4 the orders carry extra products, so their totals grew. The orders themselves — customers, dates, statuses — are the same 600.
 
 **3. What is a subquery?**
 A `SELECT` inside another statement, in parentheses. The outer query uses its result as a value, a list, a row or a table, depending on where you put it.
@@ -112,14 +112,32 @@ Only the outermost `ORDER BY` controls the order you see. The join re-reads the 
 **36. But it was sorted when I tried it yesterday.**
 It can happen to survive — that depends on the plan the database picks, which depends on the data and the statistics. "Worked yesterday" is exactly why it's a trap. The docs say an unordered result's order "must not be relied on."
 
-**37. What does `WITH RECURSIVE` add?**
+**37. What's the difference between a JOIN and UNION?**
+A join puts two tables side by side — more columns per row. `UNION` stacks two query results — more rows, the same columns.
+
+**38. UNION or UNION ALL?**
+`UNION ALL`, unless you want duplicates removed. `UNION` removes duplicate *rows*, and a row can be just a value: stacking in-store and online order totals with `UNION` gives 106,263.47 instead of 157,078.41 — seven orders of exactly 249.00 count once.
+
+**39. My UNION put last names in the first-name column. Why no error?**
+Columns are paired by position, not by name, and the result takes its column names from the first query. Both columns were text, so nothing complained. A different *number* of columns would have errored.
+
+**40. How is EXCEPT different from NOT IN?**
+Set operations treat NULL as equal to NULL, the way `DISTINCT` does. "Employees with no cancelled order" via `EXCEPT` gives Hayk; `NOT IN` gives nothing, because of the online orders' NULL `employeeID`.
+
+**41. EXCEPT only gives me ids. How do I get names?**
+Use it as a subquery: `WHERE customerID IN (SELECT … EXCEPT SELECT …)`. Customers who never returned anything: 8, including Levon and Astghik.
+
+**42. How do I sort or limit one side of a UNION?**
+Wrap that query in parentheses with its own `ORDER BY` and `LIMIT`. Without them, `ORDER BY` and `LIMIT` apply to the whole combined result.
+
+**43. What does `WITH RECURSIVE` add?**
 A CTE that can refer to its own previous output. It starts with a base query, then repeats a step (`UNION ALL` + a join back to itself) until a step returns no new rows.
 
-**38. Why not just keep adding self-joins?**
+**44. Why not just keep adding self-joins?**
 Each self-join is one more hop, and the depth is fixed in the query. With a hypothetical trainee under Nare, the two-hop join stops at Hayk and silently misses Vahe; the recursive CTE finds all 4 levels, however deep the chart is.
 
-**39. Can a recursive CTE run forever?**
+**45. Can a recursive CTE run forever?**
 Yes — if the data has a cycle (A reports to B, B reports to A), the step never runs out of rows. On a proper tree it stops when it reaches someone with no manager.
 
-**40. Which of today's mistakes would the database have warned me about?**
-None of them. `NOT IN` returned an empty list, the cart fan-out returned a revenue figure, the uncorrelated `EXISTS` returned everybody, the CTE fan-out returned believable averages, and the `ORDER BY` trap returned five real customers. No errors. Each was caught only by checking against something already known: a revenue of 157,078.41, a count of 600 or 529, two customers with zero orders, a column that should be in order. That's the course's thesis again — SQL bugs are silent, and knowing which number to check is the skill, whoever (or whatever) wrote the query.
+**46. Which of today's mistakes would the database have warned me about?**
+None of them. `NOT IN` returned an empty list, the cart fan-out and the `UNION` total returned revenue figures, the uncorrelated `EXISTS` returned everybody, the CTE fan-out returned believable averages, and the `ORDER BY` trap returned five real customers. No errors. Each was caught only by checking against something already known: a revenue of 157,078.41, a count of 600 or 529, two customers with zero orders, a column that should be in order. That's the course's thesis again — SQL bugs are silent, and knowing which number to check is the skill, whoever (or whatever) wrote the query.

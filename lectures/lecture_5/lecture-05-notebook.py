@@ -9,11 +9,11 @@ def _(mo):
     mo.md(r"""
     # Lecture 5 — Subqueries → CTEs
 
-    The whole lecture, one query at a time, against **Lecture 4's shop — now with real multi-product orders**: `orders` is the header (one row per order, with `orderTotal`), `order_items` the lines (one row per product in an order, with `lineTotal`). 600 orders, 965 lines; 235 orders hold more than one product.
+    The whole lecture, one query at a time, against **the same shop data as Lecture 4 — orders that hold several products**: `orders` is the header (one row per order, with `orderTotal`), `order_items` the lines (one row per product in an order, with `lineTotal`). 600 orders, 965 lines; 235 orders hold more than one product.
 
-    You already know the answers to most questions here: Levon and Astghik never ordered, Ergonomic Chair Pro (productID 35) never sold, 181 orders are online with no employee, Hayk never had an order cancelled. Completed revenue is **157,078.41** (it was 145,935.12 in Lecture 4, when every order held one product). That is the point — every query can be checked against a number you trust.
+    You already know the answers to most questions here: Levon and Astghik never ordered, Ergonomic Chair Pro (productID 35) never sold, 181 orders are online with no employee, Hayk never had an order cancelled. Completed revenue is **157,078.41**, as in Lecture 4 (in Lecture 3, when every order held one product, it was 145,935.12). That is the point — every query can be checked against a number you trust.
 
-    **Before you run this:** from the `lecture_5/` folder, run `psql postgres` and `\i steps/00-setup.sql` (it creates the `lecture05` database if it doesn't exist, loads the data, and runs `ANALYZE` so everyone's planner makes the same choices — Part 5.4 depends on that). Then start the notebook with the connection string in `LECTURE05_DSN`, e.g.
+    **Before you run this:** from the `lecture_5/` folder, run `psql postgres` and `\i steps/00-setup.sql` (it drops and recreates the `lecture05` database — so start psql in another database, not in `lecture05` — loads the data, and runs `ANALYZE` so everyone's planner makes the same choices — Part 5.4 depends on that). Then start the notebook with the connection string in `LECTURE05_DSN`, e.g.
 
     ```
     LECTURE05_DSN=postgresql://postgres:postgres@localhost:5432/lecture05 marimo edit lecture-05-notebook.py
@@ -50,7 +50,7 @@ def _(mo):
     mo.md(r"""
     ## The schema: one order, several products
 
-    **Before (Lecture 4): one product per order.** The order row itself pointed at the product through a single `productID` column — room for exactly one product.
+    **Before (Lectures 2–3): one product per order.** The order row itself pointed at the product through a single `productID` column — room for exactly one product.
     """)
     return
 
@@ -1721,7 +1721,386 @@ def _(engine, mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Part 6 — Recursive CTEs (a preview)
+    ## Part 6 — Set operations: UNION, INTERSECT, EXCEPT
+
+    A join puts tables **side by side** (more columns). A set operation **stacks** two query results (more rows, same columns):
+
+    | Operator | Result |
+    |---|---|
+    | `q1 UNION q2` | rows in either, duplicates removed |
+    | `q1 UNION ALL q2` | every row of both |
+    | `q1 INTERSECT q2` | rows in both |
+    | `q1 EXCEPT q2` | rows in `q1` that are not in `q2` |
+
+    Both queries need the same number of columns, with compatible types. `ORDER BY` / `LIMIT` at the end apply to the whole result.
+
+    ### 6.1 UNION ALL vs. UNION
+
+    **`UNION ALL`** — "one list of everybody: customers and staff". 30 + 8: expect **38**.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_union_all_people = mo.sql(
+        f"""
+        SELECT count(*) AS people
+        FROM (SELECT firstName, lastName FROM customers
+              UNION ALL
+              SELECT firstName, lastName FROM employees) AS everyone
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **`UNION`** — the same two lists, duplicates removed. A row here is just a name, so expect **35**: three people vanish.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_union_people = mo.sql(
+        f"""
+        SELECT count(*) AS people
+        FROM (SELECT firstName, lastName FROM customers
+              UNION
+              SELECT firstName, lastName FROM employees) AS everyone
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **Which three?** The names that occur twice: the two customers named Anna Sargsyan, and Lecture 4's customer/employee name pairs (Hayk Melikyan, Lilit Hovhannisyan — four different people). `UNION` merged each pair.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_vanished = mo.sql(
+        f"""
+        SELECT firstName, lastName, count(*) AS times
+        FROM (SELECT firstName, lastName FROM customers
+              UNION ALL
+              SELECT firstName, lastName FROM employees) AS everyone
+        GROUP BY firstName, lastName
+        HAVING count(*) > 1
+        ORDER BY lastName
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 6.2 THE TRAP: UNION inside a total
+
+    "Completed revenue = in-store revenue + online revenue." Stack the two sets of order totals with `UNION` and add them up:
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_union_revenue_wrong = mo.sql(
+        f"""
+        SELECT sum(orderTotal) AS revenue, count(*) AS order_totals
+        FROM (SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'in_store'
+              UNION
+              SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **What's wrong:** **106,263.47** over **324** values — the real figure is **157,078.41** over **529** completed orders. `UNION` removed every repeated *value*: seven completed orders of exactly 249.00 count once. A third of the revenue is gone, and nothing errors.
+
+    **Fix:** `UNION ALL` keeps every row. Expect **157,078.41** over **529**.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_union_all_revenue = mo.sql(
+        f"""
+        SELECT sum(orderTotal) AS revenue, count(*) AS order_totals
+        FROM (SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'in_store'
+              UNION ALL
+              SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 6.3 Columns are paired by position, not by name
+
+    **Error on purpose:** a different *number* of columns is a loud error.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo, psycopg):
+    # Error on purpose -- shows PostgreSQL's message instead of stopping the notebook.
+    try:
+        engine.execute("""
+        SELECT firstName, lastName FROM customers
+        UNION
+        SELECT firstName FROM employees
+        """)
+        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")
+    except psycopg.Error as _e:
+        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")
+    _shown
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    A different *order* of columns is silent. The second query lists `lastName, firstName`; look at the employees' "first names":
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_swapped_wrong = mo.sql(
+        f"""
+        SELECT firstName, lastName, 'customer' AS source FROM customers
+        UNION ALL
+        SELECT lastName, firstName, 'employee' FROM employees
+        ORDER BY source DESC, firstName
+        LIMIT 4
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **What's wrong:** "Avagyan", "Ghazaryan"… are last names. The first column of the second query went into the first column of the result, whatever its name — and the header (`firstname`, `lastname`) comes from the first query. Both columns are text, so nothing errors.
+
+    **Fix:** list the columns in the same order in both queries — here, `firstName, lastName` in the second query too, as in 6.1.
+
+    ### 6.4 INTERSECT — rows in both results
+
+    **Lecture 4's "who is on both lists?"**, as `INTERSECT`. Expect **Hayk Melikyan** and **Lilit Hovhannisyan** — and remember Lecture 4, 4.9: these are four different people. `INTERSECT` compares values; names are not identifiers.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_intersect_names = mo.sql(
+        f"""
+        SELECT firstName, lastName FROM customers
+        INTERSECT
+        SELECT firstName, lastName FROM employees
+        ORDER BY lastName
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **With a real key it's safe:** customers who have *both* returned and cancelled an order. `INTERSECT` gives the ids; `IN` looks up the names. Expect **12**.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_intersect_customers = mo.sql(
+        f"""
+        SELECT c.customerID, c.firstName, c.lastName
+        FROM customers c
+        WHERE c.customerID IN (SELECT customerID FROM orders WHERE status = 'returned'
+                               INTERSECT
+                               SELECT customerID FROM orders WHERE status = 'cancelled')
+        ORDER BY c.customerID
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 6.5 EXCEPT — rows in the first result, not in the second
+
+    **Part 2.1's question, a fourth way:** products minus products that appear on a line. Expect **35**.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_except_products = mo.sql(
+        f"""
+        SELECT productID FROM products
+        EXCEPT
+        SELECT productID FROM order_items
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **Part 2.2's question, where `NOT IN` returned nothing:** employees minus employees on cancelled orders. Set operations treat NULL as equal to NULL (like `DISTINCT`), so the online orders' NULLs can't poison the result. Expect **5** — Hayk.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_except_employees = mo.sql(
+        f"""
+        SELECT employeeID FROM employees
+        EXCEPT
+        SELECT employeeID FROM orders WHERE status = 'cancelled'
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **`EXCEPT` only returns the compared columns** — wrap it in `IN` to get names. Customers who never returned anything: expect **8**, including Levon and Astghik, who never ordered at all.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_except_never_returned = mo.sql(
+        f"""
+        SELECT c.customerID, c.firstName, c.lastName
+        FROM customers c
+        WHERE c.customerID IN (SELECT customerID FROM customers
+                               EXCEPT
+                               SELECT customerID FROM orders WHERE status = 'returned')
+        ORDER BY c.customerID
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 6.6 The ALL versions keep count
+
+    **`EXCEPT`** removes every copy of a matching row: `(1, 1, 2) EXCEPT (1)` → **2**.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_except_plain = mo.sql(
+        f"""
+        SELECT x FROM (VALUES (1), (1), (2)) AS a(x)
+        EXCEPT
+        SELECT x FROM (VALUES (1)) AS b(x)
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **`EXCEPT ALL`** removes one copy per match: `(1, 1, 2) EXCEPT ALL (1)` → **1, 2**.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_except_all = mo.sql(
+        f"""
+        SELECT x FROM (VALUES (1), (1), (2)) AS a(x)
+        EXCEPT ALL
+        SELECT x FROM (VALUES (1)) AS b(x)
+        ORDER BY x
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 6.7 ORDER BY / LIMIT for one branch need parentheses
+
+    "The biggest completed order in each channel": each query in parentheses with its own `ORDER BY … LIMIT 1`. Without them, `ORDER BY` and `LIMIT` would apply to the whole result. Expect order **1385** (in store) and **1158** (online), both 2,500.00 — two online orders tie, so `orderID` picks one (the tiebreaker habit from 3.5).
+
+    `WITH RECURSIVE`, next, is a `UNION ALL` of two queries: a starting row and a step that repeats.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    p6_top_per_channel = mo.sql(
+        f"""
+        (SELECT channel, orderID, orderTotal
+         FROM orders
+         WHERE status = 'completed' AND channel = 'in_store'
+         ORDER BY orderTotal DESC, orderID
+         LIMIT 1)
+        UNION ALL
+        (SELECT channel, orderID, orderTotal
+         FROM orders
+         WHERE status = 'completed' AND channel = 'online'
+         ORDER BY orderTotal DESC, orderID
+         LIMIT 1)
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Part 7 — Recursive CTEs (a preview)
 
     Lecture 4's two-hop self-join, for Nare: **Nare → Hayk → Vahe**. Two hops reach the top because the real chart is only three levels deep.
     """)
@@ -1847,7 +2226,7 @@ def _(mo):
 
     ## Verification drill
 
-    Four queries that run, look fine, and are wrong. Each is followed by what gives it away and the fix.
+    Five queries that run, look fine, and are wrong. Each is followed by what gives it away and the fix.
 
     **1. "Salespeople who never got a 1-star rating."** A `NOT IN` against the employees on 1-star orders.
     """)
@@ -2051,7 +2430,54 @@ def _(engine, mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Part 7 — Why all of this matters
+    **5. "Revenue per channel."** Two channels stacked with `UNION`, then grouped.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    d5_wrong = mo.sql(
+        f"""
+        SELECT channel, sum(orderTotal) AS revenue
+        FROM (SELECT channel, orderTotal FROM orders WHERE status = 'completed' AND channel = 'in_store'
+              UNION
+              SELECT channel, orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t
+        GROUP BY channel
+        ORDER BY channel
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **Gives it away:** together the channels make 120,201.31, not the known **157,078.41**. `UNION` removed repeated (channel, orderTotal) rows. **Fix:** no stacking needed — group the orders directly (or use `UNION ALL`). Expect in store **100,222.48**, online **56,855.93**.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    d5_fix = mo.sql(
+        f"""
+        SELECT channel, sum(orderTotal) AS revenue, count(*) AS orders
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY channel
+        ORDER BY channel
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Part 8 — Why all of this matters
 
     | Trap | Looked like | Was |
     |---|---|---|
@@ -2061,18 +2487,244 @@ def _(mo):
     | `EXISTS` without the correlation | 30 customers gave 1 star | 4 |
     | Fan-out through a CTE | Abovyan has the highest average spend (8,507.37) | Gyumri (6,714.16) |
     | `ORDER BY` inside the CTE | Anna Sargsyan is the top customer | Aram Vardanyan |
+    | `UNION` where `UNION ALL` was meant | completed revenue 106,263.47 | 157,078.41 |
+    | Set operation with the columns in a different order | an employee whose first name is "Avagyan" | Marine Avagyan |
 
-    None of them threw an error. Each produced a normal-looking table — an empty list, a revenue figure, a full list, four believable averages, five real customers.
+    None of them threw an error. Each produced a normal-looking table — an empty list, a revenue figure, a full list, four believable averages, five real customers, a smaller revenue, names in the wrong columns.
 
     SQL correctness bugs are almost always silent, and subqueries and CTEs don't change that — a CTE makes a query easier to read, which makes it easier to trust without checking. The checks are the same as last week:
 
     - **Check against ground truth you already have** — 157,078.41, 600 orders, the two customers with zero orders.
     - **Compare row counts** — `count(*)` vs. `count(column)` finds the NULL that breaks `NOT IN` (27 vs. 22); `count(*)` vs. `count(DISTINCT key)` finds fan-out (844 lines vs. 529 orders; 529 vs. 28 customers). When you can predict a count (28 × 3 = 84 for the LATERAL top-3), check it.
-    - **Answer the question two independent ways** — anti-join, `NOT IN` and `NOT EXISTS` should agree.
+    - **Answer the question two independent ways** — anti-join, `NOT IN`, `NOT EXISTS` and `EXCEPT` should agree.
     - **Look at the column you sorted by.**
     - **All or nothing is suspicious.**
 
     An AI assistant will write a beautiful three-CTE report whether the logic is right or not. Knowing which number to check is the skill.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Appendix — Lecture 4 refresher: ON vs. WHERE in a LEFT JOIN
+
+    Lecture 4's most important trap (4.7), on **dummy data** small enough to read in full — the example from Lecture 4's addendum (files 01–02). Two tiny tables: three categories, and the items in them. **Toys has no items at all.**
+
+    The question: **"Every category, with its in-stock items."** *Every* category — so Toys should appear, with nothing next to it.
+
+    **Create the dummy tables.** This cell runs SQL that changes the database, so run it before the cells below. It drops and re-creates the tables, so running it again is safe.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    # Creates (or re-creates) the two dummy tables in lecture05. Safe to re-run;
+    # steps/00-setup.sql removes them the next time it rebuilds the database.
+    engine.execute("""
+        DROP TABLE IF EXISTS demo_items, demo_categories;
+
+        CREATE TABLE demo_categories (
+            category_id INT PRIMARY KEY,
+            name        TEXT NOT NULL
+        );
+
+        CREATE TABLE demo_items (
+            item_id     INT PRIMARY KEY,
+            category_id INT NOT NULL REFERENCES demo_categories,
+            name        TEXT NOT NULL,
+            status      TEXT NOT NULL          -- 'in_stock' or 'sold_out'
+        );
+
+        INSERT INTO demo_categories VALUES
+            (1, 'Books'),
+            (2, 'Games'),
+            (3, 'Toys');                       -- Toys has no items at all
+
+        INSERT INTO demo_items VALUES
+            (10, 1, 'Atlas', 'in_stock'),
+            (11, 1, 'Novel', 'sold_out'),
+            (20, 2, 'Chess', 'in_stock');
+        """)
+    mo.md("Created `demo_categories` (3 rows) and `demo_items` (3 rows).")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **The categories** — Books, Games, and Toys (empty).
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    demo_categories_rows = mo.sql(
+        f"""
+        SELECT category_id, name FROM demo_categories ORDER BY category_id
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **The items** — two books (one sold out) and one game. Nothing points at Toys (`category_id` 3).
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    demo_items_rows = mo.sql(
+        f"""
+        SELECT item_id, category_id, name, status FROM demo_items ORDER BY item_id
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **WRONG — the right-table condition in `WHERE`.** The obvious edit: take the LEFT JOIN that keeps every category, and add "in stock only" in `WHERE`.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    onwhere_wrong = mo.sql(
+        f"""
+        SELECT c.name AS category, i.name AS item
+        FROM demo_categories c
+        LEFT JOIN demo_items i ON i.category_id = c.category_id
+        WHERE i.status = 'in_stock'
+        ORDER BY c.category_id, i.item_id
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **What's wrong:** Toys is gone — 2 rows, no error. The LEFT JOIN *did* keep Toys, as `Toys | NULL`. Then `WHERE` ran on the joined rows and tested `NULL = 'in_stock'`, which is not true, so it threw Toys away along with the sold-out Novel. A `WHERE` on the right-hand table deletes exactly the NULL-padded rows the LEFT JOIN was there to keep.
+
+    **Fix — move the condition into `ON`.** Now "in stock" only decides which items count as a *match*. Toys has no match, so it is NULL-padded and kept. Expect **3** rows, the last one `Toys | NULL`.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    onwhere_fix = mo.sql(
+        f"""
+        SELECT c.name AS category, i.name AS item
+        FROM demo_categories c
+        LEFT JOIN demo_items i ON i.category_id = c.category_id
+                              AND i.status = 'in_stock'
+        ORDER BY c.category_id, i.item_id
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **Proof that the `WHERE` version is just an INNER JOIN in disguise** — with Part 6's `EXCEPT`: (LEFT JOIN + WHERE) minus (INNER JOIN), and the other way round. **0 rows** in both directions means the two results are identical.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    onwhere_proof = mo.sql(
+        f"""
+        (SELECT c.name, i.name
+         FROM demo_categories c
+         LEFT JOIN demo_items i ON i.category_id = c.category_id
+         WHERE i.status = 'in_stock'
+         EXCEPT
+         SELECT c.name, i.name
+         FROM demo_categories c
+         JOIN demo_items i ON i.category_id = c.category_id AND i.status = 'in_stock')
+        UNION ALL
+        (SELECT c.name, i.name
+         FROM demo_categories c
+         JOIN demo_items i ON i.category_id = c.category_id AND i.status = 'in_stock'
+         EXCEPT
+         SELECT c.name, i.name
+         FROM demo_categories c
+         LEFT JOIN demo_items i ON i.category_id = c.category_id
+         WHERE i.status = 'in_stock')
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **The same trap with a count — the way it shows up in a report.** "In-stock items per category", condition in `WHERE`: Toys doesn't show 0, it disappears.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    onwhere_count_wrong = mo.sql(
+        f"""
+        SELECT c.name AS category, count(i.item_id) AS in_stock_items
+        FROM demo_categories c
+        LEFT JOIN demo_items i ON i.category_id = c.category_id
+        WHERE i.status = 'in_stock'
+        GROUP BY c.category_id, c.name
+        ORDER BY c.category_id
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **What's wrong:** 2 rows — a report reader can't tell "Toys has 0" from "Toys doesn't exist". **Fix:** the condition in `ON`, and `count(i.item_id)` (not `count(*)`, Lecture 4, 4.6) gives Toys a real **0**.
+    """)
+    return
+
+
+@app.cell
+def _(engine, mo):
+    onwhere_count_fix = mo.sql(
+        f"""
+        SELECT c.name AS category, count(i.item_id) AS in_stock_items
+        FROM demo_categories c
+        LEFT JOIN demo_items i ON i.category_id = c.category_id
+                              AND i.status = 'in_stock'
+        GROUP BY c.category_id, c.name
+        ORDER BY c.category_id
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    **The rule (Lecture 4, 4.7):** with a LEFT JOIN, conditions on the **right-hand** table go in `ON` — they decide what counts as a match. Conditions on the **left-hand** table go in `WHERE` — they decide which rows you keep. A `WHERE` that mentions the right-hand table after a LEFT JOIN should always make you stop and check: am I filtering matches, or deleting the rows my LEFT JOIN was supposed to protect?
     """)
     return
 
