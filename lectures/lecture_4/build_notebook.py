@@ -22,11 +22,13 @@ The instructor edits the notebook in marimo directly. Before regenerating,
 diff the current lecture-04-notebook.py against the previous generated
 version and carry their changes over (e.g. into this script).
 """
+
 import argparse, re, sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
 DEMO = (HERE / "lecture-04-demo.sql").read_text().split("\n")
+
 
 # ---- statements of the demo -------------------------------------------------
 def demo_statements():
@@ -39,12 +41,15 @@ def demo_statements():
                 continue
             s = k
         if t.startswith("\\") or (t.endswith(";") and not t.startswith("--")):
-            text = "\n".join(DEMO[s:k + 1]).rstrip()
+            text = "\n".join(DEMO[s : k + 1]).rstrip()
             if text.endswith(";"):
                 text = text[:-1]
-            stmts.append({"text": text, "after_setup": s > part1, "meta": t.startswith("\\")})
+            stmts.append(
+                {"text": text, "after_setup": s > part1, "meta": t.startswith("\\")}
+            )
             s = None
     return stmts
+
 
 STMTS = demo_statements()
 DISTINCT = {}
@@ -53,24 +58,44 @@ for st in STMTS:
 
 PROBLEMS = []
 
+
 def pick(snippet):
     hits = [t for t in DISTINCT if snippet in t]
-    if len(hits) > 1 and snippet in DISTINCT:      # an exact full statement wins a tie
+    if len(hits) > 1 and snippet in DISTINCT:  # an exact full statement wins a tie
         hits = [snippet]
     if len(hits) != 1:
-        PROBLEMS.append(f"snippet {snippet!r} matches {len(hits)} distinct demo statements")
+        PROBLEMS.append(
+            f"snippet {snippet!r} matches {len(hits)} distinct demo statements"
+        )
         return snippet
     if "{" in hits[0] or "}" in hits[0]:
         sys.exit(f"braces in SQL: {snippet!r}")
     return hits[0]
 
+
 # ---- cell list ----------------------------------------------------------------
 CELLS = []
-def md(text): CELLS.append(("md", text.strip("\n")))
-def sql(name, snippet): CELLS.append(("sql", name, pick(snippet)))
-def raw_sql(name, text): CELLS.append(("sql", name, text.strip("\n")))   # not from the demo: replaces \d
-def err(snippet): CELLS.append(("err", pick(snippet)))
-def mermaid(text): CELLS.append(("mermaid", text.strip("\n")))
+
+
+def md(text):
+    CELLS.append(("md", text.strip("\n")))
+
+
+def sql(name, snippet):
+    CELLS.append(("sql", name, pick(snippet)))
+
+
+def raw_sql(name, text):
+    CELLS.append(("sql", name, text.strip("\n")))  # not from the demo: replaces \d
+
+
+def err(snippet):
+    CELLS.append(("err", pick(snippet)))
+
+
+def mermaid(text):
+    CELLS.append(("mermaid", text.strip("\n")))
+
 
 md(r"""
 # Lecture 4 — Putting the Tables Back Together
@@ -182,20 +207,26 @@ md(r"""
 2. **Logical** — tables, columns, keys, constraints, still DBMS-agnostic: `orders.customerID` is a required foreign key; `orders.employeeID` is optional.
 3. **Physical** — how one engine stores it. In psql, `\d orders` shows this level. psql commands can't run in a notebook, so here are two catalog queries that show the same thing. First the exact types: **11** columns.
 """)
-raw_sql("p1_orders_columns", """
+raw_sql(
+    "p1_orders_columns",
+    """
 SELECT column_name, data_type, numeric_precision, numeric_scale, is_nullable
 FROM information_schema.columns
 WHERE table_name = 'orders'
 ORDER BY ordinal_position
-""")
+""",
+)
 md(r"""
 Then the indexes. Nobody asked for one, but PostgreSQL built **orders_pkey** to enforce the primary key — a purely physical decision.
 """)
-raw_sql("p1_orders_indexes", """
+raw_sql(
+    "p1_orders_indexes",
+    """
 SELECT indexname, indexdef
 FROM pg_indexes
 WHERE tablename = 'orders'
-""")
+""",
+)
 md(r"""
 **Why the levels matter:** mistakes at the conceptual level are cheap — erase a box, redraw an arrow. Mistakes at the physical level are expensive — a `VARCHAR(50)` that turns out too short, or a `SERIAL` that should have been `BIGINT`, means an `ALTER TABLE` on live data (Lecture 2, Part 9). The further right you move, the more a change costs.
 """)
@@ -215,7 +246,10 @@ A second, purpose-built schema you build *alongside* the normal tables, when the
 md(r"""
 Drop the star schema if an earlier run built it.
 """)
-sql("p2_drop_star", "DROP TABLE IF EXISTS fact_sales, dim_date, dim_customer, dim_product, dim_employee")
+sql(
+    "p2_drop_star",
+    "DROP TABLE IF EXISTS fact_sales, dim_date, dim_customer, dim_product, dim_employee",
+)
 md(r"""
 `dim_date`: generated once with `generate_series` — every day of 2024 (a leap year, so 366 days) with quarter, month and day name computed as columns, so no query ever recomputes them.
 """)
@@ -391,7 +425,10 @@ md(r"""
 
 Every order has exactly one customer, so this keeps one row per order: **600**.
 """)
-sql("p4_orders_customers", "SELECT count(*)\nFROM orders o\nJOIN customers c ON c.customerID = o.customerID")
+sql(
+    "p4_orders_customers",
+    "SELECT count(*)\nFROM orders o\nJOIN customers c ON c.customerID = o.customerID",
+)
 md(r"""
 Products live on the order **lines**, so reach them through `order_items`. Order 1001 has one line; order 1009 has three. Look at `ordertotal`: 1009's whole total, **147.76**, sits on every one of its lines.
 """)
@@ -399,11 +436,17 @@ sql("p4_lines_of_two_orders", "WHERE o.orderID IN (1001, 1009)")
 md(r"""
 Joining the lines changes what a row is: **965** rows, one per line — not one per order.
 """)
-sql("p4_all_lines", "SELECT count(*)\nFROM orders o\nJOIN customers   c ON c.customerID = o.customerID")
+sql(
+    "p4_all_lines",
+    "SELECT count(*)\nFROM orders o\nJOIN customers   c ON c.customerID = o.customerID",
+)
 md(r"""
 Back to one row per order, and add employees. Guess first: there are 600 orders. Expect **419**.
 """)
-sql("p4_with_employees", "JOIN customers c ON c.customerID = o.customerID\nJOIN employees e ON e.employeeID = o.employeeID")
+sql(
+    "p4_with_employees",
+    "JOIN customers c ON c.customerID = o.customerID\nJOIN employees e ON e.employeeID = o.employeeID",
+)
 md(r"""
 The missing ones are exactly the online orders: **181** of **600** have no employee, and NULL matches nothing.
 """)
@@ -411,11 +454,17 @@ sql("p4_online_count", "AS online_orders")
 md(r"""
 **Trap: the inner join that drops the online orders.** "Completed revenue, with who sold it" — someone joins `employees` just to have the names.
 """)
-sql("p4_trap_revenue_wrong", "SELECT sum(o.orderTotal) AS revenue\nFROM orders o\nJOIN employees e")
+sql(
+    "p4_trap_revenue_wrong",
+    "SELECT sum(o.orderTotal) AS revenue\nFROM orders o\nJOIN employees e",
+)
 md(r"""
 **What's wrong:** **100,222.48** is a real sum, correctly computed — over a silently incomplete set of rows. The 181 online orders found no employee, so the inner join dropped them. No error. **Fix:** the question needs no employee data at all — drop the join.
 """)
-sql("p4_trap_revenue_fixed", "SELECT sum(orderTotal) AS revenue\nFROM orders\nWHERE status = 'completed'")
+sql(
+    "p4_trap_revenue_fixed",
+    "SELECT sum(orderTotal) AS revenue\nFROM orders\nWHERE status = 'completed'",
+)
 md(r"""
 **157,078.41**: the real completed revenue. An inner join doesn't complain when rows don't match — it just quietly leaves them out.
 
@@ -450,15 +499,24 @@ sql("p4_natural_wrong", "SELECT count(*) FROM orders NATURAL JOIN sales")
 md(r"""
 **What's wrong:** **168** rows, and nothing in the query says why. NATURAL JOIN silently joined on *every* column name the two tables share — not just `orderID`. **Fix:** write the condition you mean.
 """)
-sql("p4_natural_fixed", "SELECT count(*) FROM orders o JOIN sales s ON s.orderID = o.orderID")
+sql(
+    "p4_natural_fixed",
+    "SELECT count(*) FROM orders o JOIN sales s ON s.orderID = o.orderID",
+)
 md(r"""
 **965** — every line finds its order. Here are the column names NATURAL JOIN used: **9** of them, `deliveryDate` and `rating` among them.
 """)
-sql("p4_shared_columns", "SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'")
+sql(
+    "p4_shared_columns",
+    "SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'",
+)
 md(r"""
 `deliveryDate` is NULL for every in-store order, and `NULL = NULL` is not true. The survivors are the lines of online orders that also got a rating: **168** again. The join condition should always be visible in the code — NATURAL JOIN hides it, and it changes silently when either table gains a matching column.
 """)
-sql("p4_natural_survivors", "SELECT count(*)\nFROM sales\nWHERE deliveryDate IS NOT NULL")
+sql(
+    "p4_natural_survivors",
+    "SELECT count(*)\nFROM sales\nWHERE deliveryDate IS NOT NULL",
+)
 
 md(r"""
 ### 4.5 LEFT / RIGHT / FULL OUTER JOIN — keeping what doesn't match
@@ -469,7 +527,10 @@ sql("p4_left_sample", "WHERE o.orderID BETWEEN 1001 AND 1008")
 md(r"""
 All **600** orders survive now — the inner join kept 419.
 """)
-sql("p4_left_count", "SELECT count(*)\nFROM orders o\nLEFT JOIN employees e ON e.employeeID = o.employeeID")
+sql(
+    "p4_left_count",
+    "SELECT count(*)\nFROM orders o\nLEFT JOIN employees e ON e.employeeID = o.employeeID",
+)
 md(r"""
 Give the NULLs a name and the lost revenue comes back: "Online" is the biggest branch, **56,855.93**. The four rows add up to 157,078.41.
 """)
@@ -481,7 +542,10 @@ sql("p4_right", "RIGHT JOIN customers c")
 md(r"""
 Identical to `customers LEFT JOIN orders`: **602**. This course always writes LEFT, so every query reads the same way.
 """)
-sql("p4_left_reversed", "SELECT count(*)\nFROM customers c\nLEFT JOIN orders o ON o.customerID = c.customerID")
+sql(
+    "p4_left_reversed",
+    "SELECT count(*)\nFROM customers c\nLEFT JOIN orders o ON o.customerID = c.customerID",
+)
 md(r"""
 `FULL JOIN` keeps everything from both sides — the classic tool for reconciling two lists. By name: **28** customers only, **6** employees only, **2** on both lists. Hold on to those 2.
 """)
@@ -489,7 +553,10 @@ sql("p4_full", "WHEN c.customerID IS NULL THEN 'employee only'")
 md(r"""
 **The anti-join:** "which X have no Y?" = `LEFT JOIN` + `WHERE right.key IS NULL`. Products never ordered: **1** — productID **35**, Ergonomic Chair Pro, **6** in stock.
 """)
-sql("p4_anti_products", "LEFT JOIN order_items i ON i.productID = p.productID\nWHERE i.orderID IS NULL")
+sql(
+    "p4_anti_products",
+    "LEFT JOIN order_items i ON i.productID = p.productID\nWHERE i.orderID IS NULL",
+)
 md(r"""
 **Trap: testing a nullable column.** Customers who never ordered — but the test is on `o.rating`, a column that can be NULL in a real row.
 """)
@@ -497,7 +564,10 @@ sql("p4_anti_nullable_wrong", "WHERE o.rating IS NULL")
 md(r"""
 **What's wrong:** **280** — far more than the customers who never ordered. Every real order without a rating is NULL there too, so it sneaks in. **Fix:** test the right table's primary key, which is never NULL in a real row.
 """)
-sql("p4_anti_customers_fixed", "SELECT c.customerID, c.firstName, c.lastName, c.signupDate")
+sql(
+    "p4_anti_customers_fixed",
+    "SELECT c.customerID, c.firstName, c.lastName, c.signupDate",
+)
 md(r"""
 **2** customers: Levon (**24**) and Astghik (**29**). "Which X have no Y" comes up constantly — teach it as a named pattern.
 
@@ -505,11 +575,17 @@ md(r"""
 
 Orders per customer, fewest first, with `count(*)`: Levon shows **1** order.
 """)
-sql("p4_count_star", "SELECT c.firstName, c.lastName, count(*) AS orders\nFROM customers c\nLEFT JOIN orders o ON o.customerID = c.customerID\nGROUP BY c.customerID, c.firstName, c.lastName\nORDER BY orders, c.lastName\nLIMIT 4")
+sql(
+    "p4_count_star",
+    "SELECT c.firstName, c.lastName, count(*) AS orders\nFROM customers c\nLEFT JOIN orders o ON o.customerID = c.customerID\nGROUP BY c.customerID, c.firstName, c.lastName\nORDER BY orders, c.lastName\nLIMIT 4",
+)
 md(r"""
 The LEFT JOIN gave Levon one row full of NULLs, and `count(*)` counts rows. `count(o.orderID)` counts non-NULL values: **0**.
 """)
-sql("p4_count_column", "SELECT c.firstName, c.lastName, count(o.orderID) AS orders\nFROM customers c\nLEFT JOIN orders o ON o.customerID = c.customerID\nGROUP BY c.customerID, c.firstName, c.lastName\nORDER BY orders, c.lastName\nLIMIT 4")
+sql(
+    "p4_count_column",
+    "SELECT c.firstName, c.lastName, count(o.orderID) AS orders\nFROM customers c\nLEFT JOIN orders o ON o.customerID = c.customerID\nGROUP BY c.customerID, c.firstName, c.lastName\nORDER BY orders, c.lastName\nLIMIT 4",
+)
 md(r"""
 The reflex after every outer join: both counts side by side. **602** rows, **600** real matches — they differ by exactly the 2 unmatched customers.
 """)
@@ -520,11 +596,17 @@ md(r"""
 
 `ON` applies while deciding what matches; `WHERE` applies after the whole join, NULL-padding included. Revenue per category, including categories that never sold: **13** rows, Chairs at the bottom.
 """)
-sql("p4_categories_all", "LEFT JOIN order_items i ON i.productID = p.productID\nGROUP BY p.category\nORDER BY revenue DESC NULLS LAST")
+sql(
+    "p4_categories_all",
+    "LEFT JOIN order_items i ON i.productID = p.productID\nGROUP BY p.category\nORDER BY revenue DESC NULLS LAST",
+)
 md(r"""
 **Trap (right-table half):** the boss adds "completed orders only". The obvious edit puts the status filter in `WHERE`.
 """)
-sql("p4_where_wrong", "count(i.orderID) AS lines, sum(i.lineTotal) AS revenue\nFROM products p\nLEFT JOIN order_items i ON i.productID = p.productID\nLEFT JOIN orders      o ON o.orderID   = i.orderID\nWHERE")
+sql(
+    "p4_where_wrong",
+    "count(i.orderID) AS lines, sum(i.lineTotal) AS revenue\nFROM products p\nLEFT JOIN order_items i ON i.productID = p.productID\nLEFT JOIN orders      o ON o.orderID   = i.orderID\nWHERE",
+)
 md(r"""
 **What's wrong:** **12** rows — Chairs is gone, no error. The LEFT JOIN kept the Chair row with `o.status` NULL; then WHERE ran, `NULL = 'completed'` is not true, and the row was thrown out. First attempt at a fix: move the condition into the `ON` of the orders join.
 """)
@@ -532,7 +614,10 @@ sql("p4_on_wrong_join", "AND o.status    = 'completed'")
 md(r"""
 **Still wrong:** Chairs is back (**13** rows), but Laptops shows **58028.50** — the all-orders revenue again. A line of a returned order still exists; it just gets NULL order columns, and its `lineTotal` is still summed. In a chain of joins, ask *which* join the condition belongs to. **Fix:** decide what counts as a match — a line of a completed order — *before* the LEFT JOIN, in brackets.
 """)
-sql("p4_on_fixed", "LEFT JOIN (order_items i\n           JOIN orders o ON o.orderID = i.orderID\n                        AND o.status  = 'completed')\n       ON i.productID = p.productID\nGROUP BY p.category\nORDER BY revenue DESC")
+sql(
+    "p4_on_fixed",
+    "LEFT JOIN (order_items i\n           JOIN orders o ON o.orderID = i.orderID\n                        AND o.status  = 'completed')\n       ON i.productID = p.productID\nGROUP BY p.category\nORDER BY revenue DESC",
+)
 md(r"""
 **13** rows, Laptops at the real **53412.00**, Chairs at **0.00**. "ON decides who gets invited to the party; WHERE decides who's allowed to stay after it already happened — including the guests the LEFT JOIN invited for free."
 
@@ -611,7 +696,10 @@ md(r"""
 
 `customers.moneySpent` is one number per customer. Someone joins `orders` "to count only real buyers".
 """)
-sql("p4_fanout_wrong", "SELECT sum(c.moneySpent) AS total_customer_spend\nFROM customers c\nJOIN orders o")
+sql(
+    "p4_fanout_wrong",
+    "SELECT sum(c.moneySpent) AS total_customer_spend\nFROM customers c\nJOIN orders o",
+)
 md(r"""
 **What's wrong:** **4386925.27** — wildly more than the shop ever took in, from a completely ordinary inner join. Each customer's `moneySpent` was copied onto every one of their order rows, then summed. **Fix:** the summary value already exists — don't join.
 """)
@@ -667,7 +755,10 @@ sql("dq1_wrong", "SELECT sum(o.orderTotal) AS revenue\nFROM orders o\nJOIN emplo
 md(r"""
 **What's wrong:** **100,222.48** — the inner join dropped the 181 online orders. **Fix:** leave `employees` out of a question that doesn't need it.
 """)
-sql("dq1_fixed", "SELECT sum(orderTotal) AS revenue FROM orders WHERE status = 'completed'")
+sql(
+    "dq1_fixed",
+    "SELECT sum(orderTotal) AS revenue FROM orders WHERE status = 'completed'",
+)
 md(r"""
 **157,078.41.**
 
@@ -683,11 +774,17 @@ Levon and Astghik have **0** — exactly who the email is for.
 
 **Q3.** "Completed revenue for every product category, including those with none."
 """)
-sql("dq3_wrong", "SELECT p.category, coalesce(sum(i.lineTotal), 0) AS revenue\nFROM products p\nLEFT JOIN order_items i")
+sql(
+    "dq3_wrong",
+    "SELECT p.category, coalesce(sum(i.lineTotal), 0) AS revenue\nFROM products p\nLEFT JOIN order_items i",
+)
 md(r"""
 **What's wrong:** **12** rows — the `WHERE` undid the LEFT JOIN, and Chairs is gone. **Fix:** decide what counts as a match before the LEFT JOIN.
 """)
-sql("dq3_fixed", "SELECT p.category, coalesce(sum(i.lineTotal), 0) AS revenue\nFROM products p\nLEFT JOIN (order_items i")
+sql(
+    "dq3_fixed",
+    "SELECT p.category, coalesce(sum(i.lineTotal), 0) AS revenue\nFROM products p\nLEFT JOIN (order_items i",
+)
 md(r"""
 **13** rows, Chairs at **0.00**.
 
@@ -726,6 +823,7 @@ SQL correctness bugs are almost always silent. Nothing turns red; the query runs
 For anyone using AI to write their SQL, that's not a side skill. It's the actual skill.
 """)
 
+
 # ---- appendix: the addendum traps (addendum/01..08, standalone scratch tables) ----
 def addendum_cells():
     md(r"""
@@ -738,16 +836,24 @@ Eight short demos from `addendum/`, each on its own tiny scratch tables (suffixe
     for f in sorted((HERE / "addendum").glob("0*.sql")):
         lines = f.read_text().split("\n")
         n = f.name[:2]
-        title = next(l for l in lines if l.startswith("-- TRAP") or l.startswith("-- NOT A TRAP"))[3:].strip()
+        title = next(
+            l for l in lines if l.startswith("-- TRAP") or l.startswith("-- NOT A TRAP")
+        )[3:].strip()
         lesson = []
         stmts, pending, cur = [], [], []
         for l in lines:
             s = l.strip()
             if not cur:
                 if s.startswith("-- LESSON:") or (lesson and s.startswith("--")):
-                    lesson.append(s[2:].strip()); continue
+                    lesson.append(s[2:].strip())
+                    continue
                 if not s or s.startswith("--"):
-                    if s.startswith("-- =") or s.startswith("-- TRAP") or s.startswith("-- NOT A TRAP") or "Standalone:" in s:
+                    if (
+                        s.startswith("-- =")
+                        or s.startswith("-- TRAP")
+                        or s.startswith("-- NOT A TRAP")
+                        or "Standalone:" in s
+                    ):
                         continue
                     pending.append(l.strip()[3:] if l.strip().startswith("-- ") else "")
                     continue
@@ -759,7 +865,7 @@ Eight short demos from `addendum/`, each on its own tiny scratch tables (suffixe
                     body = body[: len(body) - len(last)] + last.split("--")[0].rstrip()
                 stmts.append(("\n".join(pending).strip(), body[:-1]))
                 pending, cur = [], []
-        stmts = stmts[:-1]          # the file's final DROP: cleanup, skipped here (see above)
+        stmts = stmts[:-1]  # the file's final DROP: cleanup, skipped here (see above)
         assert stmts and stmts[0][1].startswith("DROP TABLE IF EXISTS"), f.name
         for k, (comment, text) in enumerate(stmts):
             if "{" in text or "}" in text:
@@ -767,10 +873,15 @@ Eight short demos from `addendum/`, each on its own tiny scratch tables (suffixe
             head = f"### {title}\n\n" if k == 0 else ""
             if not comment:
                 first = text.split("\n")[0]
-                comment = ("Drop this trap's scratch tables if an earlier run left them." if first.startswith("DROP")
-                           else f"Create `{first.split()[2]}`." if first.startswith("CREATE TABLE")
-                           else f"Load the sample rows into `{first.split()[2]}`." if first.startswith("INSERT")
-                           else "Run the query.")
+                comment = (
+                    "Drop this trap's scratch tables if an earlier run left them."
+                    if first.startswith("DROP")
+                    else f"Create `{first.split()[2]}`."
+                    if first.startswith("CREATE TABLE")
+                    else f"Load the sample rows into `{first.split()[2]}`."
+                    if first.startswith("INSERT")
+                    else "Run the query."
+                )
             comment = re.sub(r"^---- (.*?) ----$", r"**\1**", comment, flags=re.M)
             # indented comment lines are result rows: show them as a code block
             out_lines, block = [], []
@@ -779,7 +890,8 @@ Eight short demos from `addendum/`, each on its own tiny scratch tables (suffixe
                     block.append(line.strip())
                 else:
                     if block:
-                        out_lines += ["```", *block, "```"]; block = []
+                        out_lines += ["```", *block, "```"]
+                        block = []
                     out_lines.append(line)
             comment = "\n".join(out_lines).strip()
             md(head + comment)
@@ -787,13 +899,18 @@ Eight short demos from `addendum/`, each on its own tiny scratch tables (suffixe
         if lesson:
             md("**Lesson:** " + " ".join(lesson).replace("LESSON:", "").strip())
 
+
 addendum_cells()
 
 # ---- coverage -------------------------------------------------------------------
 if PROBLEMS:
     sys.exit("\n".join(PROBLEMS))
 used = {c[2] for c in CELLS if c[0] == "sql"} | {c[1] for c in CELLS if c[0] == "err"}
-missing = [t for t, st in DISTINCT.items() if st["after_setup"] and not st["meta"] and t not in used]
+missing = [
+    t
+    for t, st in DISTINCT.items()
+    if st["after_setup"] and not st["meta"] and t not in used
+]
 if missing:
     sys.exit("demo statements missing from the notebook:\n\n" + "\n\n".join(missing))
 for k, c in enumerate(CELLS):
@@ -803,40 +920,68 @@ names = [c[1] for c in CELLS if c[0] == "sql"]
 if len(names) != len(set(names)):
     sys.exit("duplicate SQL variable names")
 
+
 # ---- render -------------------------------------------------------------------
 def ind(text, n):
     return "\n".join((" " * n + l) if l.strip() else "" for l in text.split("\n"))
 
+
 def render(verify=False):
-    out = ['import marimo', '', '__generated_with = "0.25.0"', 'app = marimo.App(width="medium")', '']
+    out = [
+        "import marimo",
+        "",
+        '__generated_with = "0.25.0"',
+        'app = marimo.App(width="medium")',
+        "",
+    ]
     for c in CELLS:
         out.append("")
         if c[0] == "md":
-            out.append('@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r"""\n' + ind(c[1], 4) + '\n    """)\n    return\n')
+            out.append(
+                '@app.cell(hide_code=True)\ndef _(mo):\n    mo.md(r"""\n'
+                + ind(c[1], 4)
+                + '\n    """)\n    return\n'
+            )
         elif c[0] == "mermaid":
-            out.append('@app.cell(hide_code=True)\ndef _(mo):\n    mo.mermaid(r"""\n' + ind(c[1], 4) + '\n    """)\n    return\n')
+            out.append(
+                '@app.cell(hide_code=True)\ndef _(mo):\n    mo.mermaid(r"""\n'
+                + ind(c[1], 4)
+                + '\n    """)\n    return\n'
+            )
         elif c[0] == "imports":
-            out.append('@app.cell\ndef _():\n    import os\n\n    import marimo as mo\n    import psycopg\n\n    return mo, os, psycopg\n')
+            out.append(
+                "@app.cell\ndef _():\n    import os\n\n    import marimo as mo\n    import psycopg\n\n    return mo, os, psycopg\n"
+            )
         elif c[0] == "connect":
-            out.append('@app.cell\ndef _(os, psycopg):\n    # One connection for the whole notebook. Load the data first with\n'
-                       '    # psql + steps/00-setup.sql; set LECTURE04_DSN if yours differs.\n'
-                       '    engine = psycopg.connect(\n'
-                       '        os.environ.get("LECTURE04_DSN", "postgresql://postgres:postgres@localhost:5432/lecture04"),\n'
-                       '        autocommit=True,\n    )\n    return (engine,)\n')
+            out.append(
+                "@app.cell\ndef _(os, psycopg):\n    # One connection for the whole notebook. Load the data first with\n"
+                "    # psql + steps/00-setup.sql; set LECTURE04_DSN if yours differs.\n"
+                "    engine = psycopg.connect(\n"
+                '        os.environ.get("LECTURE04_DSN", "postgresql://postgres:postgres@localhost:5432/lecture04"),\n'
+                "        autocommit=True,\n    )\n    return (engine,)\n"
+            )
         elif c[0] == "sql":
             ret = f"return ({c[1]},)" if verify else "return"
-            out.append(f'@app.cell\ndef _(engine, mo):\n    {c[1]} = mo.sql(\n        f"""\n' + ind(c[2], 8) +
-                       f'\n        """,\n        engine=engine\n    )\n    {ret}\n')
+            out.append(
+                f'@app.cell\ndef _(engine, mo):\n    {c[1]} = mo.sql(\n        f"""\n'
+                + ind(c[2], 8)
+                + f'\n        """,\n        engine=engine\n    )\n    {ret}\n'
+            )
         elif c[0] == "err":
-            out.append('@app.cell\ndef _(engine, mo, psycopg):\n'
-                       '    # Error on purpose -- shows PostgreSQL\'s message instead of stopping the notebook.\n'
-                       '    try:\n        engine.execute("""\n' + ind(c[1], 8) + '\n        """)\n'
-                       '        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")\n'
-                       '    except psycopg.Error as _e:\n'
-                       '        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")\n'
-                       '    _shown\n    return\n')
+            out.append(
+                "@app.cell\ndef _(engine, mo, psycopg):\n"
+                "    # Error on purpose -- shows PostgreSQL's message instead of stopping the notebook.\n"
+                '    try:\n        engine.execute("""\n'
+                + ind(c[1], 8)
+                + '\n        """)\n'
+                '        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")\n'
+                "    except psycopg.Error as _e:\n"
+                '        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")\n'
+                "    _shown\n    return\n"
+            )
     out += ["", 'if __name__ == "__main__":', "    app.run()", ""]
     return "\n".join(out)
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--verify")
@@ -844,5 +989,7 @@ a = ap.parse_args()
 (HERE / "lecture-04-notebook.py").write_text(render())
 if a.verify:
     Path(a.verify).write_text(render(verify=True))
-print(f"{len(CELLS)} cells: {sum(c[0]=='sql' for c in CELLS)} SQL, {sum(c[0]=='err' for c in CELLS)} error, "
-      f"{sum(c[0]=='mermaid' for c in CELLS)} mermaid, {sum(c[0]=='md' for c in CELLS)} markdown")
+print(
+    f"{len(CELLS)} cells: {sum(c[0] == 'sql' for c in CELLS)} SQL, {sum(c[0] == 'err' for c in CELLS)} error, "
+    f"{sum(c[0] == 'mermaid' for c in CELLS)} mermaid, {sum(c[0] == 'md' for c in CELLS)} markdown"
+)

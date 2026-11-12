@@ -1,0 +1,22 @@
+-- ============================================================
+-- Lecture 6 — Window Functions
+-- YSU, Data Science for Business
+--
+-- Window functions: OVER, PARTITION BY, ORDER BY inside OVER, ranking
+-- (row_number, rank, dense_rank, ntile), top-N per group, lag/lead and
+-- first/last/nth_value, frames (ROWS, RANGE, GROUPS), and how windows
+-- meet NULLs, joins, FILTER and the star schema -- on the same shop
+-- data as Lectures 4 and 5. Most answers can be checked against a
+-- number you already know.
+--
+-- Needs PostgreSQL 11 or later (GROUPS frames and RANGE with an offset,
+-- Part 6). Checked on PostgreSQL 14, 16 and 18: identical results.
+--
+-- Run this whole script at once (from the lecture_6/ folder, so the
+-- \copy paths in Part 0 resolve), or run each part separately from
+-- steps/00-setup.sql through steps/08-drill.sql (numbered to match
+-- the Parts in lecture-06-notes.md). Four statements error ON
+-- PURPOSE -- the comments say which. Twenty-five more are WRONG on
+-- purpose and run without any error -- the comments say which, and
+-- what the right answer is.
+-- ============================================================

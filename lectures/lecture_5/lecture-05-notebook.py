@@ -39,7 +39,9 @@ def _(os, psycopg):
     # One connection for the whole notebook. Load the data first with
     # psql + steps/00-setup.sql; set LECTURE05_DSN if yours differs.
     engine = psycopg.connect(
-        os.environ.get("LECTURE05_DSN", "postgresql://postgres:postgres@localhost:5432/lecture05"),
+        os.environ.get(
+            "LECTURE05_DSN", "postgresql://postgres:postgres@localhost:5432/lecture05"
+        ),
         autocommit=True,
     )
     return (engine,)
@@ -158,7 +160,7 @@ def _(engine, mo):
         UNION ALL SELECT 'orders',      count(*) FROM orders
         UNION ALL SELECT 'order_items', count(*) FROM order_items
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -190,7 +192,7 @@ def _(engine, mo):
         f"""
         SELECT round(avg(price), 2) AS avg_price FROM products
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -212,7 +214,7 @@ def _(engine, mo):
         WHERE price > (SELECT avg(price) FROM products)
         ORDER BY price DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -241,7 +243,7 @@ def _(engine, mo):
         ORDER BY revenue DESC
         LIMIT 3
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -263,9 +265,13 @@ def _(engine, mo, psycopg):
         FROM products
         WHERE price > (SELECT price FROM products WHERE category = 'Phones')
         """)
-        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")
+        _shown = mo.callout(
+            mo.md("No error?! This query was supposed to fail."), kind="warn"
+        )
     except psycopg.Error as _e:
-        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")
+        _shown = mo.callout(
+            mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger"
+        )
     _shown
     return
 
@@ -286,7 +292,7 @@ def _(engine, mo):
         FROM products
         WHERE price > (SELECT price FROM products WHERE productName = 'iPhone 16')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -310,7 +316,7 @@ def _(engine, mo):
         WHERE customerID IN (SELECT customerID FROM orders
                              WHERE orderDate BETWEEN '2024-12-01' AND '2024-12-31')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -332,7 +338,7 @@ def _(engine, mo):
         JOIN orders o ON o.customerID = c.customerID
         WHERE o.orderDate BETWEEN '2024-12-01' AND '2024-12-31'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -354,7 +360,7 @@ def _(engine, mo):
         WHERE customerID = ANY (SELECT customerID FROM orders
                                 WHERE orderDate BETWEEN '2024-12-01' AND '2024-12-31')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -376,7 +382,7 @@ def _(engine, mo):
         WHERE price > ALL (SELECT price FROM products WHERE category = 'Phones')
         ORDER BY price DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -397,7 +403,7 @@ def _(engine, mo):
         FROM products
         WHERE price > ANY (SELECT price FROM products WHERE category = 'Phones')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -422,7 +428,7 @@ def _(engine, mo):
                                          FROM orders WHERE orderID = 1595)
         ORDER BY orderID
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -444,9 +450,13 @@ def _(engine, mo, psycopg):
         engine.execute("""
         SELECT avg(count(*)) FROM orders GROUP BY customerID
         """)
-        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")
+        _shown = mo.callout(
+            mo.md("No error?! This query was supposed to fail."), kind="warn"
+        )
     except psycopg.Error as _e:
-        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")
+        _shown = mo.callout(
+            mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger"
+        )
     _shown
     return
 
@@ -469,7 +479,7 @@ def _(engine, mo):
               FROM orders
               GROUP BY customerID) AS per_customer
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -494,7 +504,7 @@ def _(engine, mo):
         WHERE pc.order_count >= 40
         ORDER BY pc.order_count DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -522,7 +532,7 @@ def _(engine, mo):
         LEFT JOIN order_items i ON i.productID = p.productID
         WHERE i.orderID IS NULL
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -543,7 +553,7 @@ def _(engine, mo):
         FROM products
         WHERE productID NOT IN (SELECT productID FROM order_items)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -564,7 +574,7 @@ def _(engine, mo):
         FROM products p
         WHERE NOT EXISTS (SELECT 1 FROM order_items i WHERE i.productID = p.productID)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -589,7 +599,7 @@ def _(engine, mo):
                5 NOT IN (1, 2, NULL) AS with_null,
                2 NOT IN (1, 2, NULL) AS match_with_null
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -611,7 +621,7 @@ def _(engine, mo):
         WHERE e.employeeID NOT IN (SELECT o.employeeID FROM orders o
                                    WHERE o.status = 'cancelled')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -638,7 +648,7 @@ def _(engine, mo):
                           WHERE o.employeeID = e.employeeID
                             AND o.status = 'cancelled')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -659,7 +669,7 @@ def _(engine, mo):
         FROM orders
         WHERE status = 'cancelled'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -682,7 +692,7 @@ def _(engine, mo):
                                    WHERE o.status = 'cancelled'
                                      AND o.employeeID IS NOT NULL)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -705,7 +715,7 @@ def _(engine, mo):
                           AND o.status = 'cancelled'
         WHERE o.orderID IS NULL
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -732,7 +742,7 @@ def _(engine, mo):
         JOIN order_items i ON i.orderID = o.orderID
         WHERE o.status = 'completed'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -755,7 +765,7 @@ def _(engine, mo):
         FROM orders
         WHERE status = 'completed'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -778,7 +788,7 @@ def _(engine, mo):
         JOIN order_items i ON i.orderID = o.orderID
         WHERE o.status = 'completed'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -801,7 +811,7 @@ def _(engine, mo):
         JOIN order_items i ON i.orderID = o.orderID
         WHERE o.status = 'completed'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -826,7 +836,7 @@ def _(engine, mo):
               GROUP BY orderID) AS l ON l.orderID = o.orderID
         WHERE o.status = 'completed'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -852,7 +862,7 @@ def _(engine, mo):
         WHERE o.status = 'completed'
           AND p.category = 'Accessories'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -880,7 +890,7 @@ def _(engine, mo):
                       WHERE i.orderID = o.orderID
                         AND p.category = 'Accessories')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -908,7 +918,7 @@ def _(engine, mo):
                          WHERE p2.category = p.category)
         ORDER BY p.category, p.price DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -928,9 +938,13 @@ def _(engine, mo, psycopg):
         engine.execute("""
         SELECT avg(p2.price) FROM products p2 WHERE p2.category = p.category
         """)
-        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")
+        _shown = mo.callout(
+            mo.md("No error?! This query was supposed to fail."), kind="warn"
+        )
     except psycopg.Error as _e:
-        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")
+        _shown = mo.callout(
+            mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger"
+        )
     _shown
     return
 
@@ -962,7 +976,7 @@ def _(engine, mo):
                               FROM orders o3 WHERE o3.customerID = o.customerID)
         ORDER BY o.orderTotal DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -988,7 +1002,7 @@ def _(engine, mo):
         JOIN employees m ON m.employeeID = e.managerID
         WHERE e.hireDate < m.hireDate
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1011,7 +1025,7 @@ def _(engine, mo):
                             FROM employees m
                             WHERE m.employeeID = e.managerID)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1036,7 +1050,7 @@ def _(engine, mo):
         FROM employees e
         ORDER BY direct_reports DESC, e.employeeID
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1064,9 +1078,13 @@ def _(engine, mo, psycopg):
                 LIMIT 1) AS latest
         FROM customers c
         """)
-        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")
+        _shown = mo.callout(
+            mo.md("No error?! This query was supposed to fail."), kind="warn"
+        )
     except psycopg.Error as _e:
-        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")
+        _shown = mo.callout(
+            mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger"
+        )
     _shown
     return
 
@@ -1092,9 +1110,13 @@ def _(engine, mo, psycopg):
               ORDER BY o.orderDate DESC, o.orderTime DESC
               LIMIT 1) AS latest ON true
         """)
-        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")
+        _shown = mo.callout(
+            mo.md("No error?! This query was supposed to fail."), kind="warn"
+        )
     except psycopg.Error as _e:
-        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")
+        _shown = mo.callout(
+            mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger"
+        )
     _shown
     return
 
@@ -1121,7 +1143,7 @@ def _(engine, mo):
                       LIMIT 1) AS latest ON true
         ORDER BY latest.orderTotal DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1148,7 +1170,7 @@ def _(engine, mo):
         WHERE c.customerID IN (2, 24, 27)
         ORDER BY c.customerID, top3.orderTotal DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1173,7 +1195,7 @@ def _(engine, mo):
                       ORDER BY o.orderTotal DESC, o.orderID
                       LIMIT 3) AS top3 ON true
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1198,7 +1220,7 @@ def _(engine, mo):
                            ORDER BY o.orderTotal DESC, o.orderID
                            LIMIT 3) AS top3 ON true
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1223,7 +1245,7 @@ def _(engine, mo):
         FROM customers c
         WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customerID = c.customerID)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1244,7 +1266,7 @@ def _(engine, mo):
         FROM customers c
         WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customerID = c.customerID)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1265,7 +1287,7 @@ def _(engine, mo):
         FROM customers c
         WHERE EXISTS (SELECT NULL FROM orders o WHERE o.customerID = c.customerID)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1287,7 +1309,7 @@ def _(engine, mo):
         WHERE EXISTS (SELECT 1 FROM employees r WHERE r.managerID = m.employeeID)
         ORDER BY m.employeeID
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1315,7 +1337,7 @@ def _(engine, mo):
         WHERE EXISTS (SELECT 1 FROM orders o
                       WHERE o.rating = 1)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1341,7 +1363,7 @@ def _(engine, mo):
                         AND o.rating = 1)
         ORDER BY c.customerID
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1364,7 +1386,7 @@ def _(engine, mo):
                       WHERE customerID = customerID
                         AND rating = 1)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1385,7 +1407,7 @@ def _(engine, mo):
         FROM products
         WHERE productID NOT IN (SELECT productID FROM orders)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1406,7 +1428,7 @@ def _(engine, mo):
         FROM products
         WHERE productID NOT IN (SELECT productID FROM order_items)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1428,7 +1450,7 @@ def _(engine, mo):
         WHERE NOT EXISTS (SELECT 1 FROM orders o
                           WHERE o.rating = 1)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1453,7 +1475,7 @@ def _(engine, mo):
                           WHERE o.customerID = c.customerID
                             AND o.rating = 1)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1485,7 +1507,7 @@ def _(engine, mo):
         WHERE pc.order_count >= 40
         ORDER BY pc.order_count DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1521,7 +1543,7 @@ def _(engine, mo):
         WHERE pc.order_count > ov.avg_count
         ORDER BY pc.order_count DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1558,7 +1580,7 @@ def _(engine, mo):
         GROUP BY c.city
         ORDER BY avg_customer_spend DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1593,7 +1615,7 @@ def _(engine, mo):
         GROUP BY c.city
         ORDER BY avg_customer_spend DESC
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1623,7 +1645,7 @@ def _(engine, mo):
         JOIN orders o ON o.customerID = cs.customerID
                      AND o.status = 'completed'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1649,7 +1671,7 @@ def _(engine, mo):
         SELECT sum(spent) AS total_spend, count(*) AS customers
         FROM customer_spend
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1680,7 +1702,7 @@ def _(engine, mo):
         JOIN customers c ON c.customerID = t.customerID
         LIMIT 5
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1713,7 +1735,7 @@ def _(engine, mo):
         ORDER BY t.spent DESC
         LIMIT 5
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1750,7 +1772,7 @@ def _(engine, mo):
               UNION ALL
               SELECT firstName, lastName FROM employees) AS everyone
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1772,7 +1794,7 @@ def _(engine, mo):
               UNION
               SELECT firstName, lastName FROM employees) AS everyone
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1797,7 +1819,7 @@ def _(engine, mo):
         HAVING count(*) > 1
         ORDER BY lastName
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1821,7 +1843,7 @@ def _(engine, mo):
               UNION
               SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1845,7 +1867,7 @@ def _(engine, mo):
               UNION ALL
               SELECT orderTotal FROM orders WHERE status = 'completed' AND channel = 'online') AS t
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1869,9 +1891,13 @@ def _(engine, mo, psycopg):
         UNION
         SELECT firstName FROM employees
         """)
-        _shown = mo.callout(mo.md("No error?! This query was supposed to fail."), kind="warn")
+        _shown = mo.callout(
+            mo.md("No error?! This query was supposed to fail."), kind="warn"
+        )
     except psycopg.Error as _e:
-        _shown = mo.callout(mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger")
+        _shown = mo.callout(
+            mo.md(f"**ERROR:** `{_e.diag.message_primary}`"), kind="danger"
+        )
     _shown
     return
 
@@ -1894,7 +1920,7 @@ def _(engine, mo):
         ORDER BY source DESC, firstName
         LIMIT 4
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1922,7 +1948,7 @@ def _(engine, mo):
         SELECT firstName, lastName FROM employees
         ORDER BY lastName
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1946,7 +1972,7 @@ def _(engine, mo):
                                SELECT customerID FROM orders WHERE status = 'cancelled')
         ORDER BY c.customerID
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1969,7 +1995,7 @@ def _(engine, mo):
         EXCEPT
         SELECT productID FROM order_items
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -1990,7 +2016,7 @@ def _(engine, mo):
         EXCEPT
         SELECT employeeID FROM orders WHERE status = 'cancelled'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2014,7 +2040,7 @@ def _(engine, mo):
                                SELECT customerID FROM orders WHERE status = 'returned')
         ORDER BY c.customerID
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2037,7 +2063,7 @@ def _(engine, mo):
         EXCEPT
         SELECT x FROM (VALUES (1)) AS b(x)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2059,7 +2085,7 @@ def _(engine, mo):
         SELECT x FROM (VALUES (1)) AS b(x)
         ORDER BY x
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2092,7 +2118,7 @@ def _(engine, mo):
          ORDER BY orderTotal DESC, orderID
          LIMIT 1)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2117,7 +2143,7 @@ def _(engine, mo):
         LEFT JOIN employees mm ON mm.employeeID = m.managerID
         WHERE e.firstName = 'Nare'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2145,7 +2171,7 @@ def _(engine, mo):
         LEFT JOIN staff mm ON mm.employeeID = m.managerID
         WHERE e.firstName = 'Sevak'
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2182,7 +2208,7 @@ def _(engine, mo):
         FROM chain
         ORDER BY level
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2214,7 +2240,7 @@ def _(engine, mo):
         FROM org
         ORDER BY path
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2241,7 +2267,7 @@ def _(engine, mo):
         FROM employees e
         WHERE e.employeeID NOT IN (SELECT employeeID FROM orders WHERE rating = 1)
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2263,7 +2289,7 @@ def _(engine, mo):
         WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.employeeID = e.employeeID AND o.rating = 1)
         ORDER BY e.employeeID
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2283,7 +2309,7 @@ def _(engine, mo):
         SELECT count(*) AS one_star, count(employeeID) AS with_an_employee
         FROM orders WHERE rating = 1
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2304,7 +2330,7 @@ def _(engine, mo):
         FROM customers c
         WHERE EXISTS (SELECT 1 FROM orders WHERE customerID = customerID AND status = 'returned')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2325,7 +2351,7 @@ def _(engine, mo):
         FROM customers c
         WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customerID = c.customerID AND o.status = 'returned')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2351,7 +2377,7 @@ def _(engine, mo):
         FROM customer_orders co
         JOIN orders o ON o.customerID = co.customerID
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2370,7 +2396,7 @@ def _(engine, mo):
         f"""
         SELECT count(*) AS total_orders FROM orders
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2398,7 +2424,7 @@ def _(engine, mo):
         JOIN products p ON p.productID = r.productID
         LIMIT 3
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2422,7 +2448,7 @@ def _(engine, mo):
         ORDER BY times_ordered DESC, p.productName
         LIMIT 3
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2446,7 +2472,7 @@ def _(engine, mo):
         GROUP BY channel
         ORDER BY channel
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2469,7 +2495,7 @@ def _(engine, mo):
         GROUP BY channel
         ORDER BY channel
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2566,7 +2592,7 @@ def _(engine, mo):
         f"""
         SELECT category_id, name FROM demo_categories ORDER BY category_id
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2585,7 +2611,7 @@ def _(engine, mo):
         f"""
         SELECT item_id, category_id, name, status FROM demo_items ORDER BY item_id
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2608,7 +2634,7 @@ def _(engine, mo):
         WHERE i.status = 'in_stock'
         ORDER BY c.category_id, i.item_id
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2633,7 +2659,7 @@ def _(engine, mo):
                               AND i.status = 'in_stock'
         ORDER BY c.category_id, i.item_id
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2668,7 +2694,7 @@ def _(engine, mo):
          LEFT JOIN demo_items i ON i.category_id = c.category_id
          WHERE i.status = 'in_stock')
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2692,7 +2718,7 @@ def _(engine, mo):
         GROUP BY c.category_id, c.name
         ORDER BY c.category_id
         """,
-        engine=engine
+        engine=engine,
     )
     return
 
@@ -2716,7 +2742,7 @@ def _(engine, mo):
         GROUP BY c.category_id, c.name
         ORDER BY c.category_id
         """,
-        engine=engine
+        engine=engine,
     )
     return
 

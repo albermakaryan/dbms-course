@@ -1,0 +1,18 @@
+# Alber's own notebook cells, kept across rebuilds of lecture-06-notebook.py.
+# build_notebook.py inserts each group right after the generated cell whose
+# text contains the AFTER line (the build fails if that line is not found
+# exactly once). Edit or add cells here, not in the notebook.
+
+### AFTER: The same numbers as both older versions — one query, no join, the filter written once. (Part 7.5 proves all three agree on every row.)
+@app.cell(hide_code=True)
+def _(engine, mo):
+    _df = mo.sql(
+        f"""
+        select 
+            sum(ordertotal) over()
+        from orders
+        """,
+        engine=engine
+    )
+    return
+### END CELL

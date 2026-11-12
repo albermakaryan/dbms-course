@@ -17,14 +17,17 @@ The script creates a fresh database, runs the assembled file statement
 by statement, and writes each statement's output under it as a comment
 (full output for up to 6 rows, otherwise the row count).
 """
+
 import argparse, os, re, subprocess
 from pathlib import Path
 
 HERE = Path(__file__).parent
 STEPS = [f"{n:02d}" for n in range(1, 13)] + ["15"]
 
+
 def banner(title, note):
     return f"\n\n\n-- ============================================================\n-- Lecture 4 — {title}\n-- {note}\n-- ============================================================\n\n"
+
 
 PART1 = """-- ---- The physical level: how this engine stores orders ----
 -- Exact types, constraints, defaults -- and the primary-key index
@@ -235,18 +238,40 @@ HEADER = """-- ============================================================
 -- ============================================================
 """
 
+
 def assemble():
-    out = [HEADER, banner("Part 0: load the data", "Creates the lecture04 database if missing, and connects to it."),
-           (HERE / "steps/00-setup.sql").read_text()]
+    out = [
+        HEADER,
+        banner(
+            "Part 0: load the data",
+            "Creates the lecture04 database if missing, and connects to it.",
+        ),
+        (HERE / "steps/00-setup.sql").read_text(),
+    ]
     out += [banner("Part 1: data models", "Run after Part 0."), PART1]
-    out += [banner("Part 2: order_items, the junction table", "Run after Part 0."), PART2]
-    out += [banner("Part 3: JOINs, step by step", "The files steps/01 ... steps/15, in order. Read-only.")]
+    out += [
+        banner("Part 2: order_items, the junction table", "Run after Part 0."),
+        PART2,
+    ]
+    out += [
+        banner(
+            "Part 3: JOINs, step by step",
+            "The files steps/01 ... steps/15, in order. Read-only.",
+        )
+    ]
     for s in STEPS:
         f = next((HERE / "steps").glob(f"{s}-*.sql"))
         out += ["\n\n\n", f.read_text()]
-    out += [banner("Part 4: build a star (one fact row per order line)", "Creates the star schema (safe to re-run)."), PART4]
+    out += [
+        banner(
+            "Part 4: build a star (one fact row per order line)",
+            "Creates the star schema (safe to re-run).",
+        ),
+        PART4,
+    ]
     out += [banner("Part 5: verification drill", "Read-only."), PART5]
     return "".join(out)
+
 
 def statements(text):
     """Split into (start, end) spans of statements: lines up to a ';' at line end, or a backslash command line."""
@@ -263,8 +288,13 @@ def statements(text):
             start = None
     return lines, spans
 
+
 def summarize(output):
-    out = [l.rstrip() for l in output.strip("\n").split("\n") if l.strip() and "NOTICE:" not in l]
+    out = [
+        l.rstrip()
+        for l in output.strip("\n").split("\n")
+        if l.strip() and "NOTICE:" not in l
+    ]
     if not out:
         return []
     err = [l for l in out if "ERROR:" in l or l.startswith("HINT:")]
@@ -279,28 +309,46 @@ def summarize(output):
         return body[:2] + [f"... {n} rows"]
     return out[:6]
 
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", required=True)
     a = ap.parse_args()
     env = dict(os.environ, PGPASSWORD="secret")
     base = ["psql", "-X", "-h", "localhost", "-p", a.port, "-U", "postgres"]
-    subprocess.run(base + ["-d", "postgres", "-qc", "DROP DATABASE IF EXISTS lecture04"], env=env, check=True)
+    subprocess.run(
+        base + ["-d", "postgres", "-qc", "DROP DATABASE IF EXISTS lecture04"],
+        env=env,
+        check=True,
+    )
     text = assemble()
     lines, spans = statements(text)
     # psql session per statement keeps outputs separable; \c in setup is handled by
     # running the setup file once, then everything else in lecture04.
-    setup_end = text.split("\n").index("UNION ALL SELECT 'order_items', count(*) FROM order_items;")
-    r = subprocess.run(base + ["-d", "postgres", "-q", "-f", str(HERE / "steps/00-setup.sql")],
-                       env=env, capture_output=True, text=True, cwd=HERE)
+    setup_end = text.split("\n").index(
+        "UNION ALL SELECT 'order_items', count(*) FROM order_items;"
+    )
+    r = subprocess.run(
+        base + ["-d", "postgres", "-q", "-f", str(HERE / "steps/00-setup.sql")],
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=HERE,
+    )
     assert "ERROR" not in r.stderr, r.stderr
     results = {}
-    for (s, e) in spans:
+    for s, e in spans:
         if e <= setup_end:
             continue
-        stmt = "\n".join(lines[s:e + 1])
-        r = subprocess.run(base + ["-d", "lecture04", "-P", "footer=on"], input=stmt, env=env,
-                           capture_output=True, text=True, cwd=HERE)
+        stmt = "\n".join(lines[s : e + 1])
+        r = subprocess.run(
+            base + ["-d", "lecture04", "-P", "footer=on"],
+            input=stmt,
+            env=env,
+            capture_output=True,
+            text=True,
+            cwd=HERE,
+        )
         if stmt.strip().startswith("\\d"):
             continue
         results[e] = summarize(r.stdout + r.stderr)
@@ -310,7 +358,10 @@ def main():
         if k in results and results[k]:
             final += ["-- " + x for x in results[k]]
     (HERE / "lecture-04-demo.sql").write_text("\n".join(final).rstrip("\n") + "\n")
-    print(f"{len(spans)} statements; {sum(1 for v in results.values() if any('ERROR' in x for x in v))} errors on purpose")
+    print(
+        f"{len(spans)} statements; {sum(1 for v in results.values() if any('ERROR' in x for x in v))} errors on purpose"
+    )
+
 
 if __name__ == "__main__":
     main()
