@@ -1,0 +1,9 @@
+employeeID,firstName,lastName,email,birthDate,hireDate,position,branch,salary
+1,Gor,Mkrtchyan,gor.mkrtchyan@techshop.am,1990-03-15,2019-04-01,Senior Sales,Yerevan Center,1400.00
+2,Ani,Harutyunyan,ani.harutyunyan@techshop.am,1994-08-22,2020-09-15,Sales Associate,Yerevan Center,1100.00
+3,Vahe,Sahakyan,vahe.sahakyan@techshop.am,1987-06-04,2017-02-01,Store Manager,Yerevan Center,1900.00
+4,Nare,Ghazaryan,nare.ghazaryan@techshop.am,1996-10-19,2022-06-10,Sales Associate,Yerevan Mall,1000.00
+5,Hayk,Melikyan,hayk.melikyan@techshop.am,1985-02-11,2018-11-05,Senior Sales,Yerevan Mall,1350.00
+6,Lilit,Hovhannisyan,lilit.hovhannisyan@techshop.am,1998-07-07,2023-03-20,Sales Associate,Yerevan Mall,950.00
+7,Arman,Grigoryan,arman.grigoryan@techshop.am,1992-12-30,2021-01-11,Sales Associate,Gyumri,900.00
+8,Marine,Avagyan,marine.avagyan@techshop.am,1989-05-18,2016-08-01,Senior Sales,Gyumri,1300.00

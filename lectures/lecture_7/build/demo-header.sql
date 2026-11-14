@@ -1,0 +1,33 @@
+-- ============================================================
+-- Lecture 7 — Performance: EXPLAIN, Indexing, Partitioning
+-- YSU, Data Science for Business
+--
+-- Reading plans (EXPLAIN, ANALYZE, BUFFERS), how a table is stored on
+-- disk (files, pages, row addresses), statistics and estimates, scan
+-- types and selectivity, B-tree indexes and what they cost,
+-- composite / partial / covering / expression indexes, the traps that
+-- make an index go unused, plans for Lecture 5's and 6's alternatives,
+-- partitioning, and when to do none of it. Correctness questions use
+-- the small shop data of Lectures 4-6; speed questions use two
+-- generated tables, orders_big (5,000,000 rows) and customers_big
+-- (50,000).
+--
+-- Needs PostgreSQL 11 or later (13 or later for Part 2.6), and a
+-- superuser for Part 2 (pageinspect, pg_ls_dir). Reference output below: PostgreSQL 18
+-- (18.6) on a laptop (Intel i7-13700H, NVMe disk), with the settings
+-- pinned in Part 0 (no parallel query, no JIT). Checked on 14, 16 and
+-- 18: see lecture-07-notes.md for what differs.
+--
+-- TIMINGS ARE FROM ONE RUN ON ONE MACHINE. Yours will differ. Compare
+-- plan shape (node names, Index Cond vs Filter), estimated vs actual
+-- rows, and Buffers -- those carry over between machines. Medians of
+-- three runs are in the notes.
+--
+-- Run this whole script at once (from the lecture_7/ folder, so the
+-- \copy paths in Part 0 resolve; about 4 minutes), or each part
+-- separately: steps/00-setup.sql, then steps/01-... to steps/10-...
+-- in order (numbered to match the Parts in lecture-07-notes.md).
+-- Each Part removes the indexes and tables it creates, so orders_big
+-- goes into every Part with its primary key only. Errors on purpose
+-- are marked in the comments.
+-- ============================================================
